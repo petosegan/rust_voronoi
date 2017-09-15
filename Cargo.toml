@@ -1,0 +1,17 @@
+[package]
+
+name = "voronoi-gen"
+version = "0.1.0"
+authors = [
+    "Will Turner <rwturner17@gmail.com>"
+]
+
+[[bin]]
+name = "voronoi-gen"
+
+[dependencies]
+piston = "0.33.0"
+piston2d-graphics = "0.21.1"
+pistoncore-glutin_window = "0.39.0"
+piston2d-opengl_graphics = "0.46.0"
+rand = "0.3"
