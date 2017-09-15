@@ -2,6 +2,7 @@ extern crate piston;
 extern crate graphics;
 extern crate glutin_window;
 extern crate opengl_graphics;
+extern crate voronoi_gen;
 extern crate rand;
 
 use piston::window::WindowSettings;
@@ -9,64 +10,14 @@ use piston::event_loop::*;
 use piston::input::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{ GlGraphics, OpenGL };
-use rand::{Rng, Rand};
-use std::ops::Mul;
-
-#[derive(Clone)]
-pub struct Point {
-	x: f64,
-	y: f64
-}
-
-impl Point {
-	pub fn new(x: f64, y: f64) -> Self {
-		Point {x: x, y: y}
-	}
-}
-
-impl Rand for Point {
-	fn rand<R: Rng>(rng: &mut R) -> Point {
-		Point::new(rand::random::<f64>(), rand::random::<f64>())
-	}
-}
-
-impl Mul<f64> for Point {
-	type Output = Point;
-
-	fn mul(self, _rhs: f64) -> Point {
-		Point {x: self.x * _rhs, y: self.y * _rhs}
-	}
-}
-
-pub struct DCEL {
-	vertices: Vec<Vertex>,
-	faces: Vec<Face>,
-	halfedges: Vec<HalfEdge>,
-}
-
-pub struct Vertex {
-	coordinates: Point,
-	incident_edge: Box<HalfEdge>,
-}
-
-pub struct Face {
-	outer_component: Option<Box<HalfEdge>>,
-	inner_components: Vec<Box<HalfEdge>>,
-}
-
-pub struct HalfEdge {
-	origin: Box<Vertex>,
-	twin: Box<HalfEdge>,
-	incident_face: Box<Face>,
-	next: Box<HalfEdge>,
-	prev: Box<HalfEdge>,
-}
+use voronoi_gen::Point;
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
     points: Vec<Point> 
 }
 
+#[allow(unused_variables)]
 impl App {
     fn render(&mut self, args: &RenderArgs) {
         use graphics::*;
@@ -86,7 +37,7 @@ impl App {
 
             for pt in points {
 
-	            let transform = c.transform.trans(pt.x, pt.y)
+	            let transform = c.transform.trans(pt.x(), pt.y())
 	                                       .trans(-DOTSIZE/2., -DOTSIZE/2.);
 
 	            ellipse(BLACK, square, transform, gl);
