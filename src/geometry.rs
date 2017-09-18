@@ -90,9 +90,23 @@ impl HalfEdge {
 struct BeachLine {
 	nodes: Vec<BeachNode>,
 	y_line: f64,
+	root: usize,
 }
 
-enum BeachNode {
+struct BeachNode {
+	parent: Option<usize>,
+	left_child: Option<usize>,
+	right_child: Option<usize>,
+	item: BeachItem,
+}
+
+impl BeachNode {
+	fn make_root(item: BeachItem) -> Self {
+		BeachNode { parent: None, left_child: None, right_child: None, item: item}
+	}
+}
+
+enum BeachItem {
 	Leaf(Arc),
 	Internal(BreakPoint),
 }
@@ -100,28 +114,24 @@ enum BeachNode {
 struct Arc {
 	site: Point,
 	site_event: Option<usize>,
-	parent: usize,
 }
 
 struct BreakPoint {
 	left_site: Point,
 	right_site: Point,
-	left_child: usize,
-	right_child: usize,
 	halfedge: usize, // index of halfedge
-	parent: usize, 
 }
 
 impl BeachNode {
 	fn get_y(&self) -> Option<ordered_float::OrderedFloat<f64>> {
-		match *self {
-			BeachNode::Leaf(ref arc) => Some(arc.site.y),
+		match self.item {
+			BeachItem::Leaf(ref arc) => Some(arc.site.y),
 			_ => None 
 		}
 	}
 	fn get_x(&self) -> Option<ordered_float::OrderedFloat<f64>> {
-		match *self {
-			BeachNode::Leaf(ref arc) => Some(arc.site.x),
+		match self.item {
+			BeachItem::Leaf(ref arc) => Some(arc.site.x),
 			_ => None 
 		}
 	}
@@ -129,39 +139,72 @@ impl BeachNode {
 
 impl BeachLine {
 	fn new() -> Self {
-		BeachLine { nodes: vec![], y_line: 0.0 }
+		BeachLine { nodes: vec![], y_line: 0.0, root: NIL }
 	}
 	fn is_empty(&self) -> bool {
 		self.nodes.is_empty()
 	}
 	fn insert_point(&mut self, pt: Point) {
-		let this_arc = Arc {site: pt, site_event: None, parent: NIL};
-		self.nodes.push(BeachNode::Leaf(this_arc));
+		let this_arc = Arc {site: pt, site_event: None};
+		let this_item = BeachItem::Leaf(this_arc);
+		let this_node = BeachNode::make_root(this_item);
+		self.nodes.push(this_node);
+		self.root = self.nodes.len() - 1;
 	}
 	fn get_arc_above(&self, pt: Point) -> usize {
 		if self.is_empty() { panic!("can't get_arc_above on empty beachline!"); }
 		let mut current_node = 0; // root
 		loop {
-			match self.nodes[current_node] {
-				BeachNode::Leaf(ref arc) => { return current_node; }
-				BeachNode::Internal(ref breakpoint) => {
+			match self.nodes[current_node].item {
+				BeachItem::Leaf(ref arc) => { return current_node; }
+				BeachItem::Internal(ref breakpoint) => {
 					let x_bp = get_breakpoint_x(breakpoint, pt.y());
-					if pt.x() < x_bp { current_node = breakpoint.left_child; }
-					else { current_node = breakpoint.right_child; }
+					if pt.x() < x_bp { current_node = self.nodes[current_node].left_child.unwrap(); }
+					else { current_node = self.nodes[current_node].right_child.unwrap(); }
 				}
 			}
 		}
 	}
-	fn get_parent(&self, node: usize) -> usize {
-		let search_node = &self.nodes[node];
-		match *search_node {
-			BeachNode::Leaf(ref arc) => { return arc.parent; }
-			BeachNode::Internal(ref breakpoint) => { return breakpoint.parent; }
+	fn tree_minimum(&self, root: usize) -> usize {
+		let mut current_node = root;
+		while let Some(left) = self.nodes[current_node].left_child {
+			current_node = left;
 		}
+		current_node
+	}
+	fn tree_maximum(&self, root: usize) -> usize {
+		let mut current_node = root;
+		while let Some(right) = self.nodes[current_node].right_child {
+			current_node = right;
+		}
+		current_node
+	}
+	fn successor(&self, node: usize) -> Option<usize> {
+		if let Some(right) = self.nodes[node].right_child {
+			return Some(self.tree_minimum(right));
+		}
+		let mut current_node = Some(node);
+		let mut current_parent = self.nodes[node].parent;
+		while current_parent.is_some() && current_node == self.nodes[current_parent.unwrap()].right_child {
+			current_node = current_parent;
+			current_parent = self.nodes[current_parent.unwrap()].parent;
+		}
+		return current_parent;
+	}
+	fn predecessor(&self, node: usize) -> Option<usize> {
+		if let Some(left) = self.nodes[node].left_child {
+			return Some(self.tree_maximum(left));
+		}
+		let mut current_node = Some(node);
+		let mut current_parent = self.nodes[node].parent;
+		while current_parent.is_some() && current_node == self.nodes[current_parent.unwrap()].left_child {
+			current_node = current_parent;
+			current_parent = self.nodes[current_parent.unwrap()].parent;
+		}
+		return current_parent;
 	}
 	fn remove_arc(&mut self, arc: usize) {
 		unimplemented!();
-
 	}
 }
 
@@ -298,7 +341,7 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 fn remove_false_alarm(arc_above: usize, beachline: &mut BeachLine, queue: &mut EventQueue) {
 	let mut has_circle = false;
 	let mut circle_leaf;
-	if let BeachNode::Leaf(ref arc) = beachline.nodes[arc_above] {
+	if let BeachItem::Leaf(ref arc) = beachline.nodes[arc_above].item {
 		if let Some(event_index) = arc.site_event {
 			if let VoronoiEvent::Circle(leaf, _) = queue.events[event_index] {
 				has_circle = true;
@@ -317,10 +360,10 @@ fn remove_false_alarm(arc_above: usize, beachline: &mut BeachLine, queue: &mut E
 
 #[allow(non_snake_case)]
 fn split_arc(arc: usize, pt: Point, beachline: &mut BeachLine, dcel: &mut DCEL) {
-	let parent = beachline.get_parent(arc);
+	let parent = beachline.nodes[arc].parent;
 
 	let mut arc_pt = Point::new(0.0, 0.0);
-	if let BeachNode::Leaf(ref this_arc) = beachline.nodes[arc] {
+	if let BeachItem::Leaf(ref this_arc) = beachline.nodes[arc].item {
 		arc_pt = this_arc.site;
 	}
 
@@ -331,64 +374,67 @@ fn split_arc(arc: usize, pt: Point, beachline: &mut BeachLine, dcel: &mut DCEL) 
 	let breakpoint_AB = BreakPoint {
 		left_site: arc_pt,
 		right_site: pt,
-		left_child: NIL,
-		right_child: NIL,
 		halfedge: twin1,
-		parent: parent,
 	};
 	let breakpoint_BA = BreakPoint {
 		left_site: pt,
 		right_site: arc_pt,
-		left_child: NIL,
-		right_child: NIL,
 		halfedge: twin2,
-		parent: NIL,
 	};
 
-	let internal_AB = BeachNode::Internal(breakpoint_AB);
-	let internal_BA = BeachNode::Internal(breakpoint_BA);
-
-	beachline.nodes.push(internal_AB);
-	let ind_AB = beachline.nodes.len();
-	beachline.nodes.push(internal_BA);
-	let ind_BA = beachline.nodes.len();
+	let internal_AB = BeachItem::Internal(breakpoint_AB);
+	let internal_BA = BeachItem::Internal(breakpoint_BA);
 
 	let arc_A1 = Arc {
 		site: arc_pt,
 		site_event: None,
-		parent: ind_AB,
 	};
 	let arc_A2 = Arc {
 		site: arc_pt,
 		site_event: None,
-		parent: ind_BA,
 	};
 	let arc_B = Arc {
 		site: pt,
 		site_event: None,
-		parent: ind_BA,
 	};
 
-	let leaf_A1 = BeachNode::Leaf(arc_A1);
-	let leaf_A2 = BeachNode::Leaf(arc_A2);
-	let leaf_B = BeachNode::Leaf(arc_B);
+	let leaf_A1 = BeachItem::Leaf(arc_A1);
+	let leaf_A2 = BeachItem::Leaf(arc_A2);
+	let leaf_B = BeachItem::Leaf(arc_B);
 
-	beachline.nodes.push(leaf_A1);
-	let ind_A1 = beachline.nodes.len();
-	beachline.nodes.push(leaf_A2);
-	let ind_A2 = beachline.nodes.len();
-	beachline.nodes.push(leaf_B);
-	let ind_B = beachline.nodes.len();
+	let ind_AB = beachline.nodes.len();
+	let ind_BA = ind_AB + 1;
+	let ind_A1 = ind_AB + 2;
+	let ind_B  = ind_AB + 3;
+	let ind_A2 = ind_AB + 4;
 
-	if let BeachNode::Internal(ref mut breakpoint) = beachline.nodes[ind_AB] {
-		breakpoint.left_child = ind_A1;
-		breakpoint.right_child = ind_BA;
+	let node_AB = BeachNode { parent: parent, left_child: Some(ind_A1), right_child: Some(ind_BA), item: internal_AB};
+	beachline.nodes.push(node_AB);
+	if let Some(parent_ind) = parent {
+		let parent_node = &mut beachline.nodes[parent_ind];
+		if parent_node.right_child.is_some() && parent_node.right_child.unwrap() == arc {
+			parent_node.right_child = Some(ind_AB);
+		} else if parent_node.left_child.is_some() && parent_node.left_child.unwrap() == arc {
+			parent_node.left_child = Some(ind_AB);
+		} else {
+			panic!("tree is borked");
+		}
+	} else {
+		beachline.root = ind_AB;
 	}
-	if let BeachNode::Internal(ref mut breakpoint) = beachline.nodes[ind_BA] {
-		breakpoint.left_child = ind_B;
-		breakpoint.right_child = ind_A2;
-		breakpoint.parent = ind_AB;
-	}
+
+	let node_BA = BeachNode {parent: Some(ind_AB), left_child: Some(ind_B), right_child: Some(ind_A2), item: internal_BA};
+	beachline.nodes.push(node_BA);
+
+	let node_A1 = BeachNode {parent: Some(ind_AB), left_child: None, right_child: None, item: leaf_A1};
+	beachline.nodes.push(node_A1);
+
+	let node_B = BeachNode {parent: Some(ind_BA), left_child: None, right_child: None, item: leaf_B};
+	beachline.nodes.push(node_B);
+
+	let node_A2 = BeachNode {parent: Some(ind_A2), left_child: None, right_child: None, item: leaf_A2};
+	beachline.nodes.push(node_A2);
+
 }
 
 fn handle_circle_event(
