@@ -104,6 +104,13 @@ impl BeachNode {
 	fn make_root(item: BeachItem) -> Self {
 		BeachNode { parent: None, left_child: None, right_child: None, item: item}
 	}
+	fn make_arc(parent: Option<usize>, item: BeachItem) -> Self {
+		if let BeachItem::Leaf(_) = item {
+			BeachNode { parent: parent, left_child: None, right_child: None, item: item}
+		} else {
+			panic!("make_arc can only make Leaf items!");
+		}
+	}
 }
 
 enum BeachItem {
@@ -426,13 +433,13 @@ fn split_arc(arc: usize, pt: Point, beachline: &mut BeachLine, dcel: &mut DCEL) 
 	let node_BA = BeachNode {parent: Some(ind_AB), left_child: Some(ind_B), right_child: Some(ind_A2), item: internal_BA};
 	beachline.nodes.push(node_BA);
 
-	let node_A1 = BeachNode {parent: Some(ind_AB), left_child: None, right_child: None, item: leaf_A1};
+	let node_A1 = BeachNode::make_arc(Some(ind_AB), leaf_A1);
 	beachline.nodes.push(node_A1);
 
-	let node_B = BeachNode {parent: Some(ind_BA), left_child: None, right_child: None, item: leaf_B};
+	let node_B = BeachNode::make_arc(Some(ind_BA), leaf_B);
 	beachline.nodes.push(node_B);
 
-	let node_A2 = BeachNode {parent: Some(ind_A2), left_child: None, right_child: None, item: leaf_A2};
+	let node_A2 = BeachNode::make_arc(Some(ind_A2), leaf_A2);
 	beachline.nodes.push(node_A2);
 
 }
