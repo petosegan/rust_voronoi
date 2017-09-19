@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 extern crate piston;
 extern crate graphics;
 extern crate glutin_window;
@@ -51,6 +54,8 @@ impl App {
 }
 
 fn main() {
+    env_logger::init();
+
     // Change this to OpenGL::V2_1 if not working.
     let opengl = OpenGL::V3_2;
 
@@ -73,6 +78,7 @@ fn main() {
     	random_pts.push(rand::random::<Point>() * (WINDOW_SIZE as f64))
     }
 
+    trace!("Computing Voronoi Diagram of {:?}", random_pts);
     let voronoi = voronoi(random_pts.clone());
     println!("Voronoi: {:?}", voronoi);
 

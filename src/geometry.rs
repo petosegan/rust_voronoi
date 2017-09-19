@@ -281,6 +281,7 @@ fn get_breakpoint_x(bp: &BreakPoint, yl: f64) -> f64 {
 // This circle event representation is redundant,
 // but it means I can get the height of the event
 // without passing in the BeachLine
+#[derive(Debug)]
 enum VoronoiEvent {
 	Site(Point),
 	Circle(usize, TripleSite), // index of disappearing arc, points of circle
@@ -381,6 +382,7 @@ impl EventQueue {
 }
 
 pub fn voronoi(points: Vec<Point>) -> DCEL {
+	trace!("Starting Voronoi Computation");
 	let mut event_queue = EventQueue::new();
 	for pt in points {
 		event_queue.push(VoronoiEvent::Site { 0: pt });
@@ -390,6 +392,7 @@ pub fn voronoi(points: Vec<Point>) -> DCEL {
 
 	while !event_queue.is_empty() {
 		let this_event = event_queue.pop().unwrap();
+		trace!("Popped event from queue: {:?}", this_event);
 		handle_event(this_event, &mut event_queue, &mut beachline, &mut result);
 	}
 	// add_bounding_box(&beachline, &mut result);
@@ -405,8 +408,9 @@ fn handle_event(this_event: VoronoiEvent, queue: &mut EventQueue, beachline: &mu
 }
 
 fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachLine, result: &mut DCEL) {
-	
+	trace!("Handling site event at {:?}", site);
 	if beachline.is_empty() {
+		trace!("Beachline was empty, inserting point.");
 		beachline.insert_point(site);
 		return;
 	}
@@ -418,14 +422,18 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 	let new_node = split_arc(arc_above, site, beachline, result);
 
 	if let Some(left_triple) = beachline.get_leftward_triple(new_node) {
+		trace!("Checking leftward triple {:?}", left_triple);
 		if breakpoints_converge(left_triple) {
+			trace!("Found converging triple");
 			let left_arc = beachline.get_left_arc(Some(new_node)).unwrap();
 			let this_event = VoronoiEvent::Circle {0: left_arc, 1: left_triple};
 			queue.push(this_event);
 		}
 	}
 	if let Some(right_triple) = beachline.get_rightward_triple(new_node) {
+		trace!("Checking rightward triple {:?}", right_triple);
 		if breakpoints_converge(right_triple) {
+			trace!("Found converging triple");
 			let right_arc = beachline.get_right_arc(Some(new_node)).unwrap();
 			let this_event = VoronoiEvent::Circle {0: right_arc, 1: right_triple};
 			queue.push(this_event);
