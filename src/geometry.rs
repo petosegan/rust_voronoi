@@ -70,15 +70,51 @@ impl DCEL {
 	}
 }
 
+impl fmt::Display for DCEL {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    	let mut vertices_disp = String::new();
+
+        for (index, node) in self.vertices.iter().enumerate() {
+            vertices_disp.push_str(format!("{}: {}\n", index, node).as_str());
+        }
+
+        let mut faces_disp = String::new();
+
+        for (index, node) in self.faces.iter().enumerate() {
+            faces_disp.push_str(format!("{}: {}\n", index, node).as_str());
+        }
+
+        let mut halfedges_disp = String::new();
+
+        for (index, node) in self.halfedges.iter().enumerate() {
+            halfedges_disp.push_str(format!("{}: {}\n", index, node).as_str());
+        }
+
+        write!(f, "Vertices:\n{}\nFaces:\n{}\nHalfedges:\n{}", vertices_disp, faces_disp, halfedges_disp)
+    }
+}
+
 #[derive(Debug)]
 pub struct Vertex {
 	coordinates: Point,
 	incident_edge: usize, // index of halfedge
 }
 
+impl fmt::Display for Vertex {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}, edge: {}", self.coordinates, self.incident_edge)
+    }
+}
+
 #[derive(Debug)]
 pub struct Face {
 	outer_component: Option<usize>, // index of halfedge
+}
+
+impl fmt::Display for Face {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "outer: {:?}", self.outer_component)
+    }
 }
 
 #[derive(Debug)]
@@ -88,6 +124,12 @@ pub struct HalfEdge {
 	incident_face: usize, // index of face
 	next: usize, // index of halfedge
 	prev: usize, // index of halfedge
+}
+
+impl fmt::Display for HalfEdge {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "origin: {}, twin: {}, face: {}, next: {}, prev: {}", self.origin, self.twin, self.incident_face, self.next, self.prev)
+    }
 }
 
 impl HalfEdge {
@@ -214,7 +256,7 @@ impl BeachLine {
 	}
 	fn get_arc_above(&self, pt: Point) -> usize {
 		if self.is_empty() { panic!("can't get_arc_above on empty beachline!"); }
-		let mut current_node = 0; // root
+		let mut current_node = self.root;
 		loop {
 			match self.nodes[current_node].item {
 				BeachItem::Leaf(_) => { return current_node; }
@@ -507,6 +549,7 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 #[allow(non_snake_case)]
 // return: the index of the node for the new arc
 fn split_arc(arc: usize, pt: Point, beachline: &mut BeachLine, dcel: &mut DCEL) -> usize {
+	trace!("Splitting arc {}", arc);
 	let parent = beachline.nodes[arc].parent;
 
 	let mut arc_pt = Point::new(0.0, 0.0);
@@ -703,7 +746,7 @@ fn handle_circle_event(
 	//    to see if breakpoints converge. If so, insert
 	//    the circle event and add pointers to BeachLine.
 	//    Repeat for the left neighbor triple.
-	unimplemented!();
+	// unimplemented!();
 }
 
 fn add_bounding_box(beachline: &BeachLine, result: &mut DCEL) { unimplemented!(); }

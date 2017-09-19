@@ -87,7 +87,7 @@ fn main() {
     trace!("Computing Voronoi Diagram of {:?}", my_pts);
     let voronoi = voronoi(my_pts.clone());
     trace!("\n\n");
-    println!("Voronoi: {:?}", voronoi);
+    println!("Voronoi:\n{}", voronoi);
 
     // Create a new game and run it.
     let mut app = App {
