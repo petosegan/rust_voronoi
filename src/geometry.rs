@@ -249,6 +249,19 @@ impl VoronoiEvent {
 
 // TODO: handle all the special cases
 fn circle_bottom(triple_site: TripleSite) -> ordered_float::OrderedFloat<f64> {
+	let circle_center = circle_center(triple_site);
+	let (_, _, p3) = triple_site;
+	let x3 = p3.x();
+	let y3 = p3.y();
+	let x_cen = circle_center.x();
+	let y_cen = circle_center.y();
+
+	let r = ((x3 - x_cen) * (x3 - x_cen) + (y3 - y_cen) * (y3 - y_cen)).sqrt();
+
+	return ordered_float::OrderedFloat::<f64>(y_cen - r);
+}
+
+fn circle_center(triple_site: TripleSite) -> Point {
 	let (p1, p2, p3) = triple_site;
 	let x1 = p1.x();
 	let x2 = p2.x();
@@ -271,9 +284,7 @@ fn circle_bottom(triple_site: TripleSite) -> ordered_float::OrderedFloat<f64> {
 
 	let x_cen = (c2 - b2 * y_cen) / a2;
 
-	let r = ((x3 - x_cen) * (x3 - x_cen) + (y3 - y_cen) * (y3 - y_cen)).sqrt();
-
-	return ordered_float::OrderedFloat::<f64>(y_cen - r);
+	return Point::new(x_cen, y_cen);
 }
 
 struct EventQueue {
@@ -320,7 +331,7 @@ pub fn voronoi(points: Vec<Point>) -> DCEL {
 fn handle_event(this_event: VoronoiEvent, queue: &mut EventQueue, beachline: &mut BeachLine, result: &mut DCEL) {
 	match this_event {
 		VoronoiEvent::Site(pt) => { handle_site_event(pt, queue, beachline, result); },
-		VoronoiEvent::Circle(leaf, _) => { handle_circle_event(leaf, queue, beachline, result); }
+		VoronoiEvent::Circle(leaf, triplesite) => { handle_circle_event(leaf, triplesite, queue, beachline, result); }
 	}
 }
 
@@ -444,10 +455,10 @@ fn split_arc(arc: usize, pt: Point, beachline: &mut BeachLine, dcel: &mut DCEL) 
 
 }
 
-// return: indices of predecessor, successor, 'other'
+// return: indices of predecessor, successor, parent, 'other'
 // where 'other' is the one of predecessor or sucessor that
 // is not the parent of the leaf.
-fn delete_leaf(leaf: usize, beachline: &mut BeachLine) -> (usize, usize, usize) {
+fn delete_leaf(leaf: usize, beachline: &mut BeachLine) -> (usize, usize, usize, usize) {
 	let pred = beachline.predecessor(leaf).unwrap();
 	let succ = beachline.successor(leaf).unwrap();
 	let parent = beachline.nodes[leaf].parent.unwrap();
@@ -502,16 +513,17 @@ fn delete_leaf(leaf: usize, beachline: &mut BeachLine) -> (usize, usize, usize) 
 		}
 	}
 
-	(pred, succ, other)
+	(pred, succ, parent, other)
 }
 
 fn handle_circle_event(
 	leaf: usize,
+	triplesite: TripleSite,
 	queue: &mut EventQueue,
 	beachline: &mut BeachLine,
-	result: &mut DCEL) {
+	dcel: &mut DCEL) {
 	// 1. Delete the leaf from BeachLine. Update breakpoints.
-	let (pred, succ, other) = delete_leaf(leaf, beachline);
+	let (pred, succ, parent, other) = delete_leaf(leaf, beachline);
 
 	//    Delete all circle events involving leaf.
 	unimplemented!();
@@ -520,7 +532,47 @@ fn handle_circle_event(
 	//    DCEL. Create halfedges for the breakpoint, and
 	//    set their pointers. Attach to the half-edges
 	//    that end at the vertex
-	unimplemented!();
+	let (twin1, twin2) = dcel.add_twins();
+
+	let circle_center = circle_center(triplesite);
+	let center_vertex = Vertex { coordinates: circle_center, incident_edge: twin1};
+	let center_vertex_ind = dcel.vertices.len();
+	dcel.vertices.push(center_vertex);
+
+	let pred_edge = {
+		if let BeachItem::Internal(ref breakpoint) = beachline.nodes[pred].item {
+			breakpoint.halfedge
+		} else {panic!("predecessor should be Internal");}
+	};
+	let succ_edge = {
+		if let BeachItem::Internal(ref breakpoint) = beachline.nodes[succ].item {
+			breakpoint.halfedge
+		} else {panic!("successor should be Internal");}
+	};
+	let parent_edge = {
+		if let BeachItem::Internal(ref breakpoint) = beachline.nodes[parent].item {
+			breakpoint.halfedge
+		} else {panic!("parent should be Internal");}
+	};
+	let other_edge = {
+		if let BeachItem::Internal(ref breakpoint) = beachline.nodes[other].item {
+			breakpoint.halfedge
+		} else {panic!("other should be Internal");}
+	};
+	let pred_edge_twin = dcel.halfedges[pred_edge].twin;
+	let succ_edge_twin = dcel.halfedges[succ_edge].twin;
+
+	dcel.halfedges[parent_edge].origin = center_vertex_ind;
+	dcel.halfedges[other_edge].origin = center_vertex_ind;
+	dcel.halfedges[twin1].origin = center_vertex_ind;
+
+	dcel.halfedges[pred_edge_twin].next = succ_edge;
+	dcel.halfedges[succ_edge_twin].next = twin1;
+	dcel.halfedges[twin2].next = pred_edge;
+
+	if let BeachItem::Internal(ref mut breakpoint) = beachline.nodes[other].item {
+		breakpoint.halfedge = twin2;
+	}
 
 	// 3. Check new triple of arcs centered on right neighbor
 	//    to see if breakpoints converge. If so, insert
