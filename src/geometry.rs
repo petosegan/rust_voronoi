@@ -444,12 +444,75 @@ fn split_arc(arc: usize, pt: Point, beachline: &mut BeachLine, dcel: &mut DCEL) 
 
 }
 
+// return: indices of predecessor, successor, 'other'
+// where 'other' is the one of predecessor or sucessor that
+// is not the parent of the leaf.
+fn delete_leaf(leaf: usize, beachline: &mut BeachLine) -> (usize, usize, usize) {
+	let pred = beachline.predecessor(leaf).unwrap();
+	let succ = beachline.successor(leaf).unwrap();
+	let parent = beachline.nodes[leaf].parent.unwrap();
+	let grandparent = beachline.nodes[parent].parent.unwrap();
+	
+	let other = if parent == pred { succ } else { pred };
+
+	let sibling;
+	if beachline.nodes[parent].right_child.unwrap() == leaf {
+		sibling = beachline.nodes[parent].left_child.unwrap();
+	} else if beachline.nodes[parent].left_child.unwrap() == leaf {
+		sibling = beachline.nodes[parent].right_child.unwrap();
+	} else {
+		panic!("family strife! parent does not acknowledge leaf!");
+	}
+
+	// transplant the sibling to replace the parent
+	if beachline.nodes[grandparent].left_child.unwrap() == parent {
+		beachline.nodes[grandparent].left_child = Some(sibling);
+	} else if beachline.nodes[grandparent].right_child.unwrap() == parent {
+		beachline.nodes[grandparent].right_child = Some(sibling);
+	} else {
+		panic!("family strife! grandparent does not acknowledge parent!");
+	}
+
+	// correct the site on 'other'
+	if other == pred {
+		let new_other_succ = beachline.successor(other).unwrap();
+		let new_site;
+		if let BeachItem::Leaf(ref arc) = beachline.nodes[new_other_succ].item {
+			new_site = arc.site;
+		} else {
+			panic!("successor of breakpoint should be a leaf");
+		}
+		if let BeachItem::Internal(ref mut bp) = beachline.nodes[other].item {
+			bp.right_site = new_site;
+		} else {
+			panic!("predecessor and successor of leaf should be internal");
+		}
+	} else {
+		let new_other_pred = beachline.predecessor(other).unwrap();
+		let new_site;
+		if let BeachItem::Leaf(ref arc) = beachline.nodes[new_other_pred].item {
+			new_site = arc.site;
+		} else {
+			panic!("predecessor of breakpoint should be a leaf");
+		}
+		if let BeachItem::Internal(ref mut bp) = beachline.nodes[other].item {
+			bp.left_site = new_site;
+		} else {
+			panic!("predecessor and successor of leaf should be internal");
+		}
+	}
+
+	(pred, succ, other)
+}
+
 fn handle_circle_event(
 	leaf: usize,
 	queue: &mut EventQueue,
 	beachline: &mut BeachLine,
 	result: &mut DCEL) {
 	// 1. Delete the leaf from BeachLine. Update breakpoints.
+	let (pred, succ, other) = delete_leaf(leaf, beachline);
+
 	//    Delete all circle events involving leaf.
 	unimplemented!();
 
