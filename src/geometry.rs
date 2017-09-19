@@ -6,7 +6,7 @@ use std::ops::Mul;
 
 const NIL: usize = !0;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Point {
 	x: ordered_float::OrderedFloat<f64>,
 	y: ordered_float::OrderedFloat<f64>
@@ -39,6 +39,7 @@ impl Mul<f64> for Point {
 	}
 }
 
+#[derive(Debug)]
 pub struct DCEL {
 	vertices: Vec<Vertex>,
 	faces: Vec<Face>,
@@ -54,23 +55,26 @@ impl DCEL {
 		let mut he2 = HalfEdge::new();
 
 		let start_index = self.halfedges.len();
-		he1.twin = start_index + 2;
-		he2.twin = start_index + 1;
+		he1.twin = start_index + 1;
+		he2.twin = start_index;
 		self.halfedges.push(he1);
 		self.halfedges.push(he2);
-		(start_index + 1, start_index + 2)
+		(start_index, start_index + 1)
 	}
 }
 
+#[derive(Debug)]
 pub struct Vertex {
 	coordinates: Point,
 	incident_edge: usize, // index of halfedge
 }
 
+#[derive(Debug)]
 pub struct Face {
 	outer_component: Option<usize>, // index of halfedge
 }
 
+#[derive(Debug)]
 pub struct HalfEdge {
 	origin: usize, // index of vertex
 	twin: usize, // index of halfedge
@@ -291,6 +295,12 @@ impl VoronoiEvent {
 			VoronoiEvent::Circle(_, triplesite) => circle_bottom(triplesite),
 		}
 	}
+	pub fn is_circle_with_leaf(&self, leaf: usize) -> bool {
+		match *self {
+			VoronoiEvent::Site(_) => false,
+			VoronoiEvent::Circle(my_leaf, _) => my_leaf == leaf,
+		}
+	}
 }
 
 fn circle_bottom(triple_site: TripleSite) -> ordered_float::OrderedFloat<f64> {
@@ -365,8 +375,8 @@ impl EventQueue {
 	pub fn pop(&mut self) -> Option<VoronoiEvent> {
 		self.events.pop()
 	}
-	pub fn remove(&mut self, index: usize) {
-		self.events.remove(index);
+	pub fn remove_circles_with_leaf(&mut self, leaf: usize) {
+		self.events.retain(|x| !x.is_circle_with_leaf(leaf))
 	}
 }
 
@@ -382,8 +392,8 @@ pub fn voronoi(points: Vec<Point>) -> DCEL {
 		let this_event = event_queue.pop().unwrap();
 		handle_event(this_event, &mut event_queue, &mut beachline, &mut result);
 	}
-	add_bounding_box(&beachline, &mut result);
-	add_cell_records(&mut result);
+	// add_bounding_box(&beachline, &mut result);
+	// add_cell_records(&mut result);
 	return result;
 }
 
@@ -403,7 +413,7 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 	
 	let arc_above = beachline.get_arc_above(site);
 
-	remove_false_alarm(arc_above, beachline, queue);
+	queue.remove_circles_with_leaf(arc_above);
 
 	let new_node = split_arc(arc_above, site, beachline, result);
 
@@ -420,30 +430,6 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 			let this_event = VoronoiEvent::Circle {0: right_arc, 1: right_triple};
 			queue.push(this_event);
 		}
-	}
-
-	// add pointers for circle events to beachline
-	unimplemented!();
-
-}
-
-fn remove_false_alarm(arc_above: usize, beachline: &mut BeachLine, queue: &mut EventQueue) {
-	let mut has_circle = false;
-	let mut circle_leaf;
-	if let BeachItem::Leaf(ref arc) = beachline.nodes[arc_above].item {
-		if let Some(event_index) = arc.site_event {
-			if let VoronoiEvent::Circle(leaf, _) = queue.events[event_index] {
-				has_circle = true;
-				circle_leaf = leaf;
-			} else {
-				panic!("arcs should only point to circle events!");
-			}
-		}
-	} else {
-		panic!("arc above should always be a leaf!");
-	}
-	if has_circle { 
-		unimplemented!();
 	}
 }
 
@@ -595,16 +581,11 @@ fn handle_circle_event(
 	queue: &mut EventQueue,
 	beachline: &mut BeachLine,
 	dcel: &mut DCEL) {
-	// 1. Delete the leaf from BeachLine. Update breakpoints.
+
 	let (pred, succ, parent, other) = delete_leaf(leaf, beachline);
 
-	//    Delete all circle events involving leaf.
-	unimplemented!();
+	queue.remove_circles_with_leaf(leaf);
 
-	// 2. Add the center of the circle as a vertex to the
-	//    DCEL. Create halfedges for the breakpoint, and
-	//    set their pointers. Attach to the half-edges
-	//    that end at the vertex
 	let (twin1, twin2) = dcel.add_twins();
 
 	let circle_center = circle_center(triplesite);

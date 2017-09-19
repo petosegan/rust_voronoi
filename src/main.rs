@@ -31,8 +31,6 @@ impl App {
         
         let points = self.points.clone();
 
-        let voronoi = voronoi(points.clone());
-
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
             clear(WHITE, gl);
@@ -68,12 +66,15 @@ fn main() {
         .build()
         .unwrap();
 
-    const NUM_POINTS: u32 = 100;
+    const NUM_POINTS: u32 = 4;
 
     let mut random_pts = vec![];
     for _ in 0..NUM_POINTS {
     	random_pts.push(rand::random::<Point>() * (WINDOW_SIZE as f64))
     }
+
+    let voronoi = voronoi(random_pts.clone());
+    println!("Voronoi: {:?}", voronoi);
 
     // Create a new game and run it.
     let mut app = App {
