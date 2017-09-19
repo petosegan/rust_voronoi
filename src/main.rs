@@ -10,7 +10,7 @@ use piston::event_loop::*;
 use piston::input::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{ GlGraphics, OpenGL };
-use voronoi_gen::Point;
+use voronoi_gen::{Point, voronoi};
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
@@ -30,6 +30,8 @@ impl App {
         let square = rectangle::square(0.0, 0.0, DOTSIZE);
         
         let points = self.points.clone();
+
+        let voronoi = voronoi(points.clone());
 
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.

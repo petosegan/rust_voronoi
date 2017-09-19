@@ -2,4 +2,4 @@ extern crate rand;
 
 mod geometry;
 
-pub use geometry::Point;
+pub use geometry::{Point, voronoi};

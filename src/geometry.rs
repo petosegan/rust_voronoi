@@ -3,8 +3,6 @@ extern crate ordered_float;
 
 use rand::{Rng, Rand};
 use std::ops::Mul;
-use std::cmp::Ordering;
-use std::collections::BinaryHeap;
 
 const NIL: usize = !0;
 
@@ -163,7 +161,7 @@ impl BeachLine {
 		let mut current_node = 0; // root
 		loop {
 			match self.nodes[current_node].item {
-				BeachItem::Leaf(ref arc) => { return current_node; }
+				BeachItem::Leaf(_) => { return current_node; }
 				BeachItem::Internal(ref breakpoint) => {
 					let x_bp = get_breakpoint_x(breakpoint, pt.y());
 					if pt.x() < x_bp { current_node = self.nodes[current_node].left_child.unwrap(); }
@@ -210,8 +208,56 @@ impl BeachLine {
 		}
 		return current_parent;
 	}
-	fn remove_arc(&mut self, arc: usize) {
-		unimplemented!();
+	fn get_left_arc(&self, node: Option<usize>) -> Option<usize> {
+		if let None = node { return None; }
+		let node = node.unwrap();
+		if let Some(left) = self.predecessor(node) {
+			self.predecessor(left)
+		} else {
+			None
+		}
+	}
+	fn get_right_arc(&self, node: Option<usize>) -> Option<usize> {
+		if let None = node { return None; }
+		let node = node.unwrap();
+		if let Some(right) = self.successor(node) {
+			self.successor(right)
+		} else {
+			None
+		}
+	}
+	fn get_leftward_triple(&self, node: usize) -> Option<TripleSite> {
+		let left_arc = self.get_left_arc(Some(node));
+		let left_left_arc = self.get_left_arc(left_arc);
+
+		let this_site = self.get_site(Some(node));
+		let left_site = self.get_site(left_arc);
+		let left_left_site = self.get_site(left_left_arc);
+
+		if this_site.is_some() && left_site.is_some() && left_left_site.is_some() {
+			return Some((left_left_site.unwrap(), left_site.unwrap(), this_site.unwrap()));
+		} else { return None; }
+	}
+	fn get_rightward_triple(&self, node: usize) -> Option<TripleSite> {
+		let right_arc = self.get_right_arc(Some(node));
+		let right_right_arc = self.get_right_arc(right_arc);
+
+		let this_site = self.get_site(Some(node));
+		let right_site = self.get_site(right_arc);
+		let right_right_site = self.get_site(right_right_arc);
+
+		if this_site.is_some() && right_site.is_some() && right_right_site.is_some() {
+			return Some((this_site.unwrap(), right_site.unwrap(), right_right_site.unwrap()));
+		} else { return None; }
+	}
+	fn get_site(&self, node: Option<usize>) -> Option<Point> {
+		if let None = node { return None; }
+		let node = node.unwrap();
+		if let BeachItem::Leaf(ref arc) = self.nodes[node].item {
+			return Some(arc.site);
+		} else {
+			return None;
+		}
 	}
 }
 
@@ -247,7 +293,6 @@ impl VoronoiEvent {
 	}
 }
 
-// TODO: handle all the special cases
 fn circle_bottom(triple_site: TripleSite) -> ordered_float::OrderedFloat<f64> {
 	let circle_center = circle_center(triple_site);
 	let (_, _, p3) = triple_site;
@@ -261,6 +306,7 @@ fn circle_bottom(triple_site: TripleSite) -> ordered_float::OrderedFloat<f64> {
 	return ordered_float::OrderedFloat::<f64>(y_cen - r);
 }
 
+// TODO: handle all the special cases
 fn circle_center(triple_site: TripleSite) -> Point {
 	let (p1, p2, p3) = triple_site;
 	let x1 = p1.x();
@@ -285,6 +331,19 @@ fn circle_center(triple_site: TripleSite) -> Point {
 	let x_cen = (c2 - b2 * y_cen) / a2;
 
 	return Point::new(x_cen, y_cen);
+}
+
+// see http://www.kmschaal.de/Diplomarbeit_KevinSchaal.pdf, pg 27
+fn breakpoints_converge(triple_site: TripleSite) -> bool {
+	let (a, b, c) = triple_site;
+	let ax = a.x();
+	let ay = a.y();
+	let bx = b.x();
+	let by = b.y();
+	let cx = c.x();
+	let cy = c.y();
+
+	(ay - by) * (bx - cx) > (by - cy) * (ax - bx)
 }
 
 struct EventQueue {
@@ -346,12 +405,24 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 
 	remove_false_alarm(arc_above, beachline, queue);
 
-	split_arc(arc_above, site, beachline, result);
+	let new_node = split_arc(arc_above, site, beachline, result);
 
-	//    Check the triple of arcs from p leftward to see
-	//    if the breakpoints converge. If so, insert the
-	//    circle event and add pointers to Status.
-	//    Repeat for the rightward triple.
+	if let Some(left_triple) = beachline.get_leftward_triple(new_node) {
+		if breakpoints_converge(left_triple) {
+			let left_arc = beachline.get_left_arc(Some(new_node)).unwrap();
+			let this_event = VoronoiEvent::Circle {0: left_arc, 1: left_triple};
+			queue.push(this_event);
+		}
+	}
+	if let Some(right_triple) = beachline.get_rightward_triple(new_node) {
+		if breakpoints_converge(right_triple) {
+			let right_arc = beachline.get_right_arc(Some(new_node)).unwrap();
+			let this_event = VoronoiEvent::Circle {0: right_arc, 1: right_triple};
+			queue.push(this_event);
+		}
+	}
+
+	// add pointers for circle events to beachline
 	unimplemented!();
 
 }
@@ -377,7 +448,8 @@ fn remove_false_alarm(arc_above: usize, beachline: &mut BeachLine, queue: &mut E
 }
 
 #[allow(non_snake_case)]
-fn split_arc(arc: usize, pt: Point, beachline: &mut BeachLine, dcel: &mut DCEL) {
+// return: the index of the node for the new arc
+fn split_arc(arc: usize, pt: Point, beachline: &mut BeachLine, dcel: &mut DCEL) -> usize {
 	let parent = beachline.nodes[arc].parent;
 
 	let mut arc_pt = Point::new(0.0, 0.0);
@@ -453,6 +525,7 @@ fn split_arc(arc: usize, pt: Point, beachline: &mut BeachLine, dcel: &mut DCEL) 
 	let node_A2 = BeachNode::make_arc(Some(ind_A2), leaf_A2);
 	beachline.nodes.push(node_A2);
 
+	return ind_B;
 }
 
 // return: indices of predecessor, successor, parent, 'other'
