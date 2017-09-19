@@ -3,6 +3,7 @@ extern crate ordered_float;
 
 use rand::{Rng, Rand};
 use std::ops::Mul;
+use std::fmt;
 
 const NIL: usize = !0;
 
@@ -22,6 +23,12 @@ impl Point {
 	pub fn y(&self) -> f64 {
 		self.y.into_inner()
 	}
+}
+
+impl fmt::Display for Point {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({0:.1}, {1:.1})", self.x(), self.y())
+    }
 }
 
 #[allow(unused_variables)]
@@ -89,17 +96,38 @@ impl HalfEdge {
 	}
 }
 
+#[derive(Debug)]
 struct BeachLine {
 	nodes: Vec<BeachNode>,
 	y_line: f64,
 	root: usize,
 }
 
+impl fmt::Display for BeachLine {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    	let mut beachline_disp = String::new();
+
+        for (index, node) in self.nodes.iter().enumerate() {
+            beachline_disp.push_str(format!("{}: {}", index, node).as_str());
+            beachline_disp.push_str("\n");
+        }
+
+        write!(f, "\nRoot: {}\ny_line: {}\n{}", self.root, self.y_line, beachline_disp)
+    }
+}
+
+#[derive(Debug)]
 struct BeachNode {
 	parent: Option<usize>,
 	left_child: Option<usize>,
 	right_child: Option<usize>,
 	item: BeachItem,
+}
+
+impl fmt::Display for BeachNode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "p: {:?}, l: {:?}, r: {:?}, item: {}", self.parent, self.left_child, self.right_child, self.item)
+    }
 }
 
 impl BeachNode {
@@ -115,20 +143,44 @@ impl BeachNode {
 	}
 }
 
+#[derive(Debug)]
 enum BeachItem {
 	Leaf(Arc),
 	Internal(BreakPoint),
 }
 
+impl fmt::Display for BeachItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    	match *self {
+        	BeachItem::Leaf(ref arc) => write!(f, "Leaf: {}", arc),
+        	BeachItem::Internal(ref bp) => write!(f, "Internal: {}", bp),
+        }
+    }
+}
+
+#[derive(Debug)]
 struct Arc {
 	site: Point,
 	site_event: Option<usize>,
 }
 
+impl fmt::Display for Arc {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    	write!(f, "site: {}, site_event: {:?}", self.site, self.site_event)
+    }
+}
+
+#[derive(Debug)]
 struct BreakPoint {
 	left_site: Point,
 	right_site: Point,
 	halfedge: usize, // index of halfedge
+}
+
+impl fmt::Display for BreakPoint {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    	write!(f, "left: {}, right: {}, halfedge: {}", self.left_site, self.right_site, self.halfedge)
+    }
 }
 
 impl BeachNode {
@@ -287,6 +339,15 @@ enum VoronoiEvent {
 	Circle(usize, TripleSite), // index of disappearing arc, points of circle
 }
 
+impl fmt::Display for VoronoiEvent {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    	match *self {
+        	VoronoiEvent::Site(pt) => { write!(f, "Site at {}", pt) },
+        	VoronoiEvent::Circle(leaf, triplesite) => { write!(f, "Circle for leaf {}, pts {}, {}, {}", leaf, triplesite.0, triplesite.1, triplesite.2) },
+        }
+    }
+}
+
 type TripleSite = (Point, Point, Point);
 
 impl VoronoiEvent {
@@ -391,8 +452,10 @@ pub fn voronoi(points: Vec<Point>) -> DCEL {
 	let mut result = DCEL::new();
 
 	while !event_queue.is_empty() {
+		trace!("\n\n");
+		trace!("Beachline: {}", beachline);
 		let this_event = event_queue.pop().unwrap();
-		trace!("Popped event from queue: {:?}", this_event);
+		trace!("Popped event from queue: {}", this_event);
 		handle_event(this_event, &mut event_queue, &mut beachline, &mut result);
 	}
 	// add_bounding_box(&beachline, &mut result);
@@ -408,7 +471,7 @@ fn handle_event(this_event: VoronoiEvent, queue: &mut EventQueue, beachline: &mu
 }
 
 fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachLine, result: &mut DCEL) {
-	trace!("Handling site event at {:?}", site);
+	trace!("Handling site event at {}", site);
 	if beachline.is_empty() {
 		trace!("Beachline was empty, inserting point.");
 		beachline.insert_point(site);
@@ -422,7 +485,7 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 	let new_node = split_arc(arc_above, site, beachline, result);
 
 	if let Some(left_triple) = beachline.get_leftward_triple(new_node) {
-		trace!("Checking leftward triple {:?}", left_triple);
+		trace!("Checking leftward triple {}, {}, {}", left_triple.0, left_triple.1, left_triple.2);
 		if breakpoints_converge(left_triple) {
 			trace!("Found converging triple");
 			let left_arc = beachline.get_left_arc(Some(new_node)).unwrap();
@@ -431,7 +494,7 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 		}
 	}
 	if let Some(right_triple) = beachline.get_rightward_triple(new_node) {
-		trace!("Checking rightward triple {:?}", right_triple);
+		trace!("Checking rightward triple {}, {}, {}", right_triple.0, right_triple.1, right_triple.2);
 		if breakpoints_converge(right_triple) {
 			trace!("Found converging triple");
 			let right_arc = beachline.get_right_arc(Some(new_node)).unwrap();
@@ -516,7 +579,7 @@ fn split_arc(arc: usize, pt: Point, beachline: &mut BeachLine, dcel: &mut DCEL) 
 	let node_B = BeachNode::make_arc(Some(ind_BA), leaf_B);
 	beachline.nodes.push(node_B);
 
-	let node_A2 = BeachNode::make_arc(Some(ind_A2), leaf_A2);
+	let node_A2 = BeachNode::make_arc(Some(ind_BA), leaf_A2);
 	beachline.nodes.push(node_A2);
 
 	return ind_B;

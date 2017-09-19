@@ -71,21 +71,28 @@ fn main() {
         .build()
         .unwrap();
 
-    const NUM_POINTS: u32 = 4;
+    // const NUM_POINTS: u32 = 4;
 
-    let mut random_pts = vec![];
-    for _ in 0..NUM_POINTS {
-    	random_pts.push(rand::random::<Point>() * (WINDOW_SIZE as f64))
-    }
+    // let mut random_pts = vec![];
+    // for _ in 0..NUM_POINTS {
+    // 	random_pts.push(rand::random::<Point>() * (WINDOW_SIZE as f64))
+    // }
 
-    trace!("Computing Voronoi Diagram of {:?}", random_pts);
-    let voronoi = voronoi(random_pts.clone());
+    let my_pts = vec![Point::new(139., 68.),
+                        Point::new(127., 106.),
+                        Point::new(87., 77.),
+                        Point::new(71., 42.),
+                        Point::new(46., 114.)];
+
+    trace!("Computing Voronoi Diagram of {:?}", my_pts);
+    let voronoi = voronoi(my_pts.clone());
+    trace!("\n\n");
     println!("Voronoi: {:?}", voronoi);
 
     // Create a new game and run it.
     let mut app = App {
         gl: GlGraphics::new(opengl),
-        points: random_pts,
+        points: my_pts,
     };
 
     let mut events = Events::new(EventSettings::new());
