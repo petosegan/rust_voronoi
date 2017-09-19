@@ -422,6 +422,7 @@ fn circle_bottom(triple_site: TripleSite) -> ordered_float::OrderedFloat<f64> {
 
 // TODO: handle all the special cases
 fn circle_center(triple_site: TripleSite) -> Point {
+	trace!("Finding center for {}, {}, {}", triple_site.0, triple_site.1, triple_site.2);
 	let (p1, p2, p3) = triple_site;
 	let x1 = p1.x();
 	let x2 = p2.x();
@@ -432,10 +433,10 @@ fn circle_center(triple_site: TripleSite) -> Point {
 
 	let c1 = x3 * x3 + y3 * y3 - x1 * x1 - y1 * y1;
 	let c2 = x3 * x3 + y3 * y3 - x2 * x2 - y2 * y2;
-	let a1 = 2. * (x1 - x3);
-	let a2 = 2. * (x2 - x3);
-	let b1 = 2. * (y1 - y3);
-	let b2 = 2. * (y2 - y3);
+	let a1 = -2. * (x1 - x3);
+	let a2 = -2. * (x2 - x3);
+	let b1 = -2. * (y1 - y3);
+	let b2 = -2. * (y2 - y3);
 
 	let numer = c1 * a2 - c2 * a1;
 	let denom = b1 * a2 - b2 * a1;
@@ -443,6 +444,7 @@ fn circle_center(triple_site: TripleSite) -> Point {
 	let y_cen = numer / denom;
 
 	let x_cen = (c2 - b2 * y_cen) / a2;
+	trace!("center at {}, {}", x_cen, y_cen);
 
 	return Point::new(x_cen, y_cen);
 }
@@ -752,3 +754,16 @@ fn handle_circle_event(
 fn add_bounding_box(beachline: &BeachLine, result: &mut DCEL) { unimplemented!(); }
 
 fn add_cell_records(result: &mut DCEL) { unimplemented!(); }
+
+pub fn make_line_segments(dcel: &DCEL) -> Vec<(Point, Point)> {
+	let mut result = vec![];
+	for halfedge in &dcel.halfedges {
+		if halfedge.origin != NIL && halfedge.next != NIL {
+			if dcel.halfedges[halfedge.next].origin != NIL {
+				result.push((dcel.vertices[halfedge.origin].coordinates,
+					dcel.vertices[dcel.halfedges[halfedge.next].origin].coordinates))
+			}
+		}
+	}
+	result
+}

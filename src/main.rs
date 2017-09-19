@@ -13,11 +13,12 @@ use piston::event_loop::*;
 use piston::input::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{ GlGraphics, OpenGL };
-use voronoi_gen::{Point, voronoi};
+use voronoi_gen::{Point, voronoi, make_line_segments};
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
-    points: Vec<Point> 
+    points: Vec<Point>,
+    lines: Vec<(Point, Point)> 
 }
 
 #[allow(unused_variables)]
@@ -26,13 +27,15 @@ impl App {
         use graphics::*;
 
         const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-        const BLACK:   [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+        const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+        const RED:   [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 
         const DOTSIZE: f64 = 5.0;
 
         let square = rectangle::square(0.0, 0.0, DOTSIZE);
         
         let points = self.points.clone();
+        let lines = self.lines.clone();
 
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
@@ -45,6 +48,15 @@ impl App {
 
 	            ellipse(BLACK, square, transform, gl);
 	        }
+
+            for this_line in lines {
+                let (p1, p2) = this_line;
+
+                // let transform = c.transform.trans(p1.x(), p1.y())
+                //                            .orient(p2.x(), p2.y());
+
+                line(RED, 2.0, [p1.x(), p1.y(), p2.x(), p2.y()], c.transform, gl);
+            }
         });
     }
 
@@ -71,11 +83,10 @@ fn main() {
         .build()
         .unwrap();
 
-    // const NUM_POINTS: u32 = 4;
-
-    // let mut random_pts = vec![];
+    // const NUM_POINTS: u32 = 20;
+    // let mut my_pts = vec![];
     // for _ in 0..NUM_POINTS {
-    // 	random_pts.push(rand::random::<Point>() * (WINDOW_SIZE as f64))
+    // 	my_pts.push(rand::random::<Point>() * (WINDOW_SIZE as f64))
     // }
 
     let my_pts = vec![Point::new(139., 68.),
@@ -88,11 +99,14 @@ fn main() {
     let voronoi = voronoi(my_pts.clone());
     trace!("\n\n");
     println!("Voronoi:\n{}", voronoi);
+    let lines = make_line_segments(&voronoi);
+    println!("Lines:\n{:?}", lines);
 
     // Create a new game and run it.
     let mut app = App {
         gl: GlGraphics::new(opengl),
         points: my_pts,
+        lines: lines
     };
 
     let mut events = Events::new(EventSettings::new());
