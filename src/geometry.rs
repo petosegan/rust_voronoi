@@ -49,14 +49,12 @@ impl Mul<f64> for Point {
 #[derive(Debug)]
 pub struct DCEL {
 	vertices: Vec<Vertex>,
-	// faces: Vec<Face>,
 	halfedges: Vec<HalfEdge>,
 }
 
 impl DCEL {
 	pub fn new() -> Self {
 		DCEL {vertices: vec![],
-			// faces: vec![], 
 			halfedges: vec![]}
 	}
 	pub fn add_twins(&mut self) -> (usize, usize) {
@@ -80,12 +78,6 @@ impl fmt::Display for DCEL {
             vertices_disp.push_str(format!("{}: {}\n", index, node).as_str());
         }
 
-        // let mut faces_disp = String::new();
-
-        // for (index, node) in self.faces.iter().enumerate() {
-        //     faces_disp.push_str(format!("{}: {}\n", index, node).as_str());
-        // }
-
         let mut halfedges_disp = String::new();
 
         for (index, node) in self.halfedges.iter().enumerate() {
@@ -107,17 +99,6 @@ impl fmt::Display for Vertex {
         write!(f, "{}, edge: {}", self.coordinates, self.incident_edge)
     }
 }
-
-// #[derive(Debug)]
-// pub struct Face {
-// 	outer_component: Option<usize>, // index of halfedge
-// }
-
-// impl fmt::Display for Face {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         write!(f, "outer: {:?}", self.outer_component)
-//     }
-// }
 
 #[derive(Debug)]
 pub struct HalfEdge {
@@ -371,37 +352,27 @@ impl BeachLine {
 	}
 }
 
+
+// TODO: cover py1 = py2 case, and py1 = yl
 fn get_breakpoint_x(bp: &BreakPoint, yl: f64) -> f64 {
 	let ax = bp.left_site.x();
 	let bx = bp.right_site.x();
 	let ay = bp.left_site.y();
 	let by = bp.right_site.y();
 
-	// TODO: cover py1 = py2 case, and py1 = yl
-
 	// shift frames
 	let bx_s = bx - ax;
 	let ay_s = ay - yl;
 	let by_s = by - yl;
 
-	// let c = ((by - yl) / (ay - yl)).sqrt();
-
-	// let x1 = (c * ax - bx) / (c - 1.);
-	// let x2 = (c * ax + bx) / (c + 1.);
-
 	let discrim = ay_s * by_s * ((ay_s - by_s) * (ay_s - by_s) + bx_s * bx_s);
 	let numer1 = ay_s * bx_s - discrim.sqrt();
-	let numer2 = ay_s * bx_s + discrim.sqrt();
 	let denom = ay_s - by_s;
 
-	let x1 = numer1 / denom + ax;
-	let x2 = numer2 / denom + ax;
+	let mut x1 = numer1 / denom;
+	x1 += ax; // shift back to original frame
 
-	let x_large = if x1 > x2 { x1 } else { x2 };
-	let x_small = if x1 > x2 { x2 } else { x1 };
-
-	if ax < bx { x_small } else { x_large }
-	// return x1;
+	return x1;
 }
 
 // TODO: handle py == yl case
@@ -531,7 +502,7 @@ impl EventQueue {
 	}
 }
 
-pub fn voronoi(points: Vec<Point>, max_x: f64, max_y: f64) -> DCEL {
+pub fn voronoi(points: Vec<Point>) -> DCEL {
 	trace!("Starting Voronoi Computation");
 	let mut event_queue = EventQueue::new();
 	for pt in points {
@@ -547,7 +518,7 @@ pub fn voronoi(points: Vec<Point>, max_x: f64, max_y: f64) -> DCEL {
 		trace!("Popped event from queue: {}", this_event);
 		handle_event(this_event, &mut event_queue, &mut beachline, &mut result);
 	}
-	add_bounding_box(&beachline, &mut result, max_x, max_y);
+	add_bounding_box(&beachline, &mut result);
 	// add_cell_records(&mut result);
 	return result;
 }
@@ -605,8 +576,6 @@ fn split_arc(arc: usize, pt: Point, beachline: &mut BeachLine, dcel: &mut DCEL) 
 	}
 
 	let (twin1, twin2) = dcel.add_twins();
-
-	// TODO: set site_events?
 	
 	let breakpoint_AB = BreakPoint {
 		left_site: arc_pt,
@@ -792,10 +761,6 @@ fn handle_circle_event(
 		breakpoint.halfedge = twin2;
 	}
 
-	// 3. Check new triple of arcs centered on right neighbor
-	//    to see if breakpoints converge. If so, insert
-	//    the circle event and add pointers to BeachLine.
-	//    Repeat for the left neighbor triple.
 	if let Some(left_triple) = beachline.get_centered_triple(left_neighbor) {
 		trace!("Checking leftward triple {}, {}, {}", left_triple.0, left_triple.1, left_triple.2);
 		if breakpoints_converge(left_triple) {
@@ -814,7 +779,7 @@ fn handle_circle_event(
 	}
 }
 
-fn add_bounding_box(beachline: &BeachLine, dcel: &mut DCEL, max_x: f64, max_y: f64) {
+fn add_bounding_box(beachline: &BeachLine, dcel: &mut DCEL) {
 	let mut current_node = beachline.tree_minimum(beachline.root);
 	trace!("\n\n");
 	loop {
@@ -823,8 +788,8 @@ fn add_bounding_box(beachline: &BeachLine, dcel: &mut DCEL, max_x: f64, max_y: f
 			BeachItem::Internal(ref breakpoint) => {
 				let this_edge = breakpoint.halfedge;
 				trace!("Extending halfedge {} with breakpoint {}, {}", this_edge, breakpoint.left_site, breakpoint.right_site);
-				let this_x = get_breakpoint_x(&breakpoint, -max_x-max_y);
-				let this_y = get_breakpoint_y(&breakpoint, -max_x-max_y);
+				let this_x = get_breakpoint_x(&breakpoint, -1000.0);
+				let this_y = get_breakpoint_y(&breakpoint, -1000.0);
 
 				let vert = Vertex {coordinates: Point::new(this_x, this_y), incident_edge: this_edge};
 				let vert_ind = dcel.vertices.len();

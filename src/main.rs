@@ -1,5 +1,4 @@
-#[macro_use]
-extern crate log;
+#[macro_use] extern crate log;
 extern crate env_logger;
 extern crate piston;
 extern crate graphics;
@@ -52,10 +51,7 @@ impl App {
             for this_line in lines {
                 let (p1, p2) = this_line;
 
-                // let transform = c.transform.trans(p1.x(), p1.y())
-                //                            .orient(p2.x(), p2.y());
-
-                line(RED, 2.0, [p1.x(), p1.y(), p2.x(), p2.y()], c.transform, gl);
+                line(RED, 1.0, [p1.x(), p1.y(), p2.x(), p2.y()], c.transform, gl);
             }
         });
     }
@@ -71,7 +67,7 @@ fn main() {
     // Change this to OpenGL::V2_1 if not working.
     let opengl = OpenGL::V3_2;
 
-    const WINDOW_SIZE: u32 = 400;
+    const WINDOW_SIZE: u32 = 800;
 
     // Create an Glutin window.
     let mut window: Window = WindowSettings::new(
@@ -83,28 +79,18 @@ fn main() {
         .build()
         .unwrap();
 
-    // const NUM_POINTS: u32 = 3;
-    // let mut my_pts = vec![];
-    // for _ in 0..NUM_POINTS {
-    // 	my_pts.push(rand::random::<Point>() * (WINDOW_SIZE as f64))
-    // }
-
-    // let my_pts = vec![Point::new(139., 68.),
-    //                     Point::new(127., 106.),
-    //                     Point::new(87., 77.),
-    //                     Point::new(71., 42.),
-    //                     Point::new(46., 114.)];
-
-    let my_pts = vec![Point::new(155., 328.),
-                        Point::new(395., 226.),
-                        Point::new(78., 129.)];
+    const NUM_POINTS: u32 = 1000;
+    let mut my_pts = vec![];
+    for _ in 0..NUM_POINTS {
+    	my_pts.push(rand::random::<Point>() * (WINDOW_SIZE as f64))
+    }
 
     trace!("Computing Voronoi Diagram of {:?}", my_pts);
-    let voronoi = voronoi(my_pts.clone(), 400., 400.);
+    let voronoi = voronoi(my_pts.clone());
     trace!("\n\n");
-    println!("Voronoi:\n{}", voronoi);
+    trace!("Voronoi:\n{}", voronoi);
     let lines = make_line_segments(&voronoi);
-    println!("Lines:\n{:?}", lines);
+    trace!("Lines:\n{:?}", lines);
 
     // Create a new game and run it.
     let mut app = App {
