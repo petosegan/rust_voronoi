@@ -9,16 +9,16 @@ type TripleSite = (Point, Point, Point);
 pub fn voronoi(points: Vec<Point>) -> DCEL {
 	trace!("Starting Voronoi Computation");
 	let mut event_queue = EventQueue::new();
-	for pt in points {
-		event_queue.push(VoronoiEvent::Site { 0: pt });
-	}
 	let mut beachline = BeachLine::new();
+	for pt in points {
+		event_queue.push(VoronoiEvent::Site { 0: pt }, &mut beachline);
+	}
 	let mut result = DCEL::new();
 
 	while !event_queue.is_empty() {
 		trace!("\n\n");
 		trace!("Beachline: {}", beachline);
-		let this_event = event_queue.pop().unwrap();
+		let this_event = event_queue.pop(&mut beachline).unwrap();
 		trace!("Popped event from queue: {}", this_event);
 		handle_event(this_event, &mut event_queue, &mut beachline, &mut result);
 	}
@@ -44,7 +44,15 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 	
 	let arc_above = beachline.get_arc_above(site);
 
-	queue.remove_circles_with_leaf(arc_above);
+	// remove false alarm from queue
+	let mut circle_event = None;
+	if let BeachItem::Leaf(ref mut arc) = beachline.nodes[arc_above].item {
+		circle_event = arc.site_event;
+		arc.site_event = None;
+	}
+	if let Some(circle_node) = circle_event {
+		queue.remove(circle_node, beachline);
+	}
 
 	let new_node = split_arc(arc_above, site, beachline, result);
 
@@ -54,7 +62,11 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 			trace!("Found converging triple");
 			let left_arc = beachline.get_left_arc(Some(new_node)).unwrap();
 			let this_event = VoronoiEvent::Circle {0: left_arc, 1: left_triple};
-			queue.push(this_event);
+			let circle_event_ind = queue.events.len();
+			queue.push(this_event, beachline);
+			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[left_arc].item {
+				arc.site_event = Some(circle_event_ind);
+			}
 		}
 	}
 	if let Some(right_triple) = beachline.get_rightward_triple(new_node) {
@@ -63,7 +75,11 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 			trace!("Found converging triple");
 			let right_arc = beachline.get_right_arc(Some(new_node)).unwrap();
 			let this_event = VoronoiEvent::Circle {0: right_arc, 1: right_triple};
-			queue.push(this_event);
+			let circle_event_ind = queue.events.len();
+			queue.push(this_event, beachline);
+			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[right_arc].item {
+				arc.site_event = Some(circle_event_ind);
+			}
 		}
 	}
 }
@@ -221,7 +237,23 @@ fn handle_circle_event(
 	let right_neighbor = beachline.get_right_arc(Some(leaf)).unwrap();
 	let (pred, succ, parent, other) = delete_leaf(leaf, beachline);
 
-	queue.remove_circles_with_leaf(leaf);
+	// removing site events involving disappearing arc
+	let mut left_circle_event = None;
+	if let BeachItem::Leaf(ref mut arc) = beachline.nodes[left_neighbor].item {
+		left_circle_event = arc.site_event;
+		arc.site_event = None;
+	}
+	if let Some(circle_node) = left_circle_event {
+		queue.remove(circle_node, beachline);
+	}
+	let mut right_circle_event = None;
+	if let BeachItem::Leaf(ref mut arc) = beachline.nodes[right_neighbor].item {
+		right_circle_event = arc.site_event;
+		arc.site_event = None;
+	}
+	if let Some(circle_node) = right_circle_event {
+		queue.remove(circle_node, beachline);
+	}
 
 	let (twin1, twin2) = dcel.add_twins();
 
@@ -270,7 +302,11 @@ fn handle_circle_event(
 		if breakpoints_converge(left_triple) {
 			trace!("Found converging triple");
 			let this_event = VoronoiEvent::Circle {0: left_neighbor, 1: left_triple};
-			queue.push(this_event);
+			let circle_event_ind = queue.events.len();
+			queue.push(this_event, beachline);
+			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[left_neighbor].item {
+				arc.site_event = Some(circle_event_ind);
+			}
 		}
 	}
 	if let Some(right_triple) = beachline.get_centered_triple(right_neighbor) {
@@ -278,7 +314,11 @@ fn handle_circle_event(
 		if breakpoints_converge(right_triple) {
 			trace!("Found converging triple");
 			let this_event = VoronoiEvent::Circle {0: right_neighbor, 1: right_triple};
-			queue.push(this_event);
+			let circle_event_ind = queue.events.len();
+			queue.push(this_event, beachline);
+			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[right_neighbor].item {
+				arc.site_event = Some(circle_event_ind);
+			}
 		}
 	}
 }

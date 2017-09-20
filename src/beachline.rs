@@ -70,7 +70,7 @@ impl fmt::Display for BeachItem {
 #[derive(Debug)]
 pub struct Arc {
 	pub site: Point,
-	pub site_event: Option<usize>,
+	pub site_event: Option<usize>, // index to circle event in EventQueue
 }
 
 impl fmt::Display for Arc {
