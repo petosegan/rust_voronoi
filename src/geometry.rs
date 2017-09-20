@@ -49,13 +49,15 @@ impl Mul<f64> for Point {
 #[derive(Debug)]
 pub struct DCEL {
 	vertices: Vec<Vertex>,
-	faces: Vec<Face>,
+	// faces: Vec<Face>,
 	halfedges: Vec<HalfEdge>,
 }
 
 impl DCEL {
 	pub fn new() -> Self {
-		DCEL {vertices: vec![], faces: vec![], halfedges: vec![]}
+		DCEL {vertices: vec![],
+			// faces: vec![], 
+			halfedges: vec![]}
 	}
 	pub fn add_twins(&mut self) -> (usize, usize) {
 		let mut he1 = HalfEdge::new();
@@ -78,11 +80,11 @@ impl fmt::Display for DCEL {
             vertices_disp.push_str(format!("{}: {}\n", index, node).as_str());
         }
 
-        let mut faces_disp = String::new();
+        // let mut faces_disp = String::new();
 
-        for (index, node) in self.faces.iter().enumerate() {
-            faces_disp.push_str(format!("{}: {}\n", index, node).as_str());
-        }
+        // for (index, node) in self.faces.iter().enumerate() {
+        //     faces_disp.push_str(format!("{}: {}\n", index, node).as_str());
+        // }
 
         let mut halfedges_disp = String::new();
 
@@ -90,7 +92,7 @@ impl fmt::Display for DCEL {
             halfedges_disp.push_str(format!("{}: {}\n", index, node).as_str());
         }
 
-        write!(f, "Vertices:\n{}\nFaces:\n{}\nHalfedges:\n{}", vertices_disp, faces_disp, halfedges_disp)
+        write!(f, "Vertices:\n{}\nHalfedges:\n{}", vertices_disp, halfedges_disp)
     }
 }
 
@@ -106,35 +108,33 @@ impl fmt::Display for Vertex {
     }
 }
 
-#[derive(Debug)]
-pub struct Face {
-	outer_component: Option<usize>, // index of halfedge
-}
+// #[derive(Debug)]
+// pub struct Face {
+// 	outer_component: Option<usize>, // index of halfedge
+// }
 
-impl fmt::Display for Face {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "outer: {:?}", self.outer_component)
-    }
-}
+// impl fmt::Display for Face {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         write!(f, "outer: {:?}", self.outer_component)
+//     }
+// }
 
 #[derive(Debug)]
 pub struct HalfEdge {
 	origin: usize, // index of vertex
 	twin: usize, // index of halfedge
-	incident_face: usize, // index of face
 	next: usize, // index of halfedge
-	prev: usize, // index of halfedge
 }
 
 impl fmt::Display for HalfEdge {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "origin: {}, twin: {}, face: {}, next: {}, prev: {}", self.origin, self.twin, self.incident_face, self.next, self.prev)
+        write!(f, "origin: {}, twin: {}, next: {}", self.origin, self.twin, self.next)
     }
 }
 
 impl HalfEdge {
 	pub fn new() -> Self {
-		HalfEdge {origin: NIL, twin: NIL, incident_face: NIL, next: NIL, prev: NIL}
+		HalfEdge {origin: NIL, twin: NIL, next: NIL}
 	}
 }
 
@@ -348,6 +348,18 @@ impl BeachLine {
 			return Some((this_site.unwrap(), right_site.unwrap(), right_right_site.unwrap()));
 		} else { return None; }
 	}
+	fn get_centered_triple(&self, node: usize) -> Option<TripleSite> {
+		let right_arc = self.get_right_arc(Some(node));
+		let left_arc = self.get_left_arc(Some(node));
+
+		let this_site = self.get_site(Some(node));
+		let right_site = self.get_site(right_arc);
+		let left_site = self.get_site(left_arc);
+
+		if this_site.is_some() && right_site.is_some() && left_site.is_some() {
+			return Some((left_site.unwrap(), this_site.unwrap(), right_site.unwrap()));
+		} else { return None; }
+	}
 	fn get_site(&self, node: Option<usize>) -> Option<Point> {
 		if let None = node { return None; }
 		let node = node.unwrap();
@@ -360,16 +372,49 @@ impl BeachLine {
 }
 
 fn get_breakpoint_x(bp: &BreakPoint, yl: f64) -> f64 {
-	let px1 = bp.left_site.x();
-	let px2 = bp.right_site.x();
-	let py1 = bp.left_site.y();
-	let py2 = bp.right_site.y();
+	let ax = bp.left_site.x();
+	let bx = bp.right_site.x();
+	let ay = bp.left_site.y();
+	let by = bp.right_site.y();
 
 	// TODO: cover py1 = py2 case, and py1 = yl
 
-	let c = ((py2 - yl) / (py1 - yl)).sqrt();
+	// shift frames
+	let bx_s = bx - ax;
+	let ay_s = ay - yl;
+	let by_s = by - yl;
 
-	return (c * px1 - px2) / (c - 1.);
+	// let c = ((by - yl) / (ay - yl)).sqrt();
+
+	// let x1 = (c * ax - bx) / (c - 1.);
+	// let x2 = (c * ax + bx) / (c + 1.);
+
+	let discrim = ay_s * by_s * ((ay_s - by_s) * (ay_s - by_s) + bx_s * bx_s);
+	let numer1 = ay_s * bx_s - discrim.sqrt();
+	let numer2 = ay_s * bx_s + discrim.sqrt();
+	let denom = ay_s - by_s;
+
+	let x1 = numer1 / denom + ax;
+	let x2 = numer2 / denom + ax;
+
+	let x_large = if x1 > x2 { x1 } else { x2 };
+	let x_small = if x1 > x2 { x2 } else { x1 };
+
+	if ax < bx { x_small } else { x_large }
+	// return x1;
+}
+
+// TODO: handle py == yl case
+fn get_breakpoint_y(bp: &BreakPoint, yl: f64) -> f64 {
+	let px = bp.left_site.x();
+	let py = bp.left_site.y();
+
+	let bp_x = get_breakpoint_x(bp, yl);
+
+	let numer = (px - bp_x) * (px - bp_x);
+	let denom = 2. * (py - yl);
+
+	return numer / denom + (py + yl) / 2.;
 }
 
 // This circle event representation is redundant,
@@ -486,7 +531,7 @@ impl EventQueue {
 	}
 }
 
-pub fn voronoi(points: Vec<Point>) -> DCEL {
+pub fn voronoi(points: Vec<Point>, max_x: f64, max_y: f64) -> DCEL {
 	trace!("Starting Voronoi Computation");
 	let mut event_queue = EventQueue::new();
 	for pt in points {
@@ -502,7 +547,7 @@ pub fn voronoi(points: Vec<Point>) -> DCEL {
 		trace!("Popped event from queue: {}", this_event);
 		handle_event(this_event, &mut event_queue, &mut beachline, &mut result);
 	}
-	// add_bounding_box(&beachline, &mut result);
+	add_bounding_box(&beachline, &mut result, max_x, max_y);
 	// add_cell_records(&mut result);
 	return result;
 }
@@ -651,6 +696,7 @@ fn delete_leaf(leaf: usize, beachline: &mut BeachLine) -> (usize, usize, usize, 
 	}
 
 	// transplant the sibling to replace the parent
+	beachline.nodes[sibling].parent = Some(grandparent);
 	if beachline.nodes[grandparent].left_child.unwrap() == parent {
 		beachline.nodes[grandparent].left_child = Some(sibling);
 	} else if beachline.nodes[grandparent].right_child.unwrap() == parent {
@@ -698,6 +744,8 @@ fn handle_circle_event(
 	beachline: &mut BeachLine,
 	dcel: &mut DCEL) {
 
+	let left_neighbor = beachline.get_left_arc(Some(leaf)).unwrap();
+	let right_neighbor = beachline.get_right_arc(Some(leaf)).unwrap();
 	let (pred, succ, parent, other) = delete_leaf(leaf, beachline);
 
 	queue.remove_circles_with_leaf(leaf);
@@ -748,12 +796,54 @@ fn handle_circle_event(
 	//    to see if breakpoints converge. If so, insert
 	//    the circle event and add pointers to BeachLine.
 	//    Repeat for the left neighbor triple.
-	// unimplemented!();
+	if let Some(left_triple) = beachline.get_centered_triple(left_neighbor) {
+		trace!("Checking leftward triple {}, {}, {}", left_triple.0, left_triple.1, left_triple.2);
+		if breakpoints_converge(left_triple) {
+			trace!("Found converging triple");
+			let this_event = VoronoiEvent::Circle {0: left_neighbor, 1: left_triple};
+			queue.push(this_event);
+		}
+	}
+	if let Some(right_triple) = beachline.get_centered_triple(right_neighbor) {
+		trace!("Checking rightward triple {}, {}, {}", right_triple.0, right_triple.1, right_triple.2);
+		if breakpoints_converge(right_triple) {
+			trace!("Found converging triple");
+			let this_event = VoronoiEvent::Circle {0: right_neighbor, 1: right_triple};
+			queue.push(this_event);
+		}
+	}
 }
 
-fn add_bounding_box(beachline: &BeachLine, result: &mut DCEL) { unimplemented!(); }
+fn add_bounding_box(beachline: &BeachLine, dcel: &mut DCEL, max_x: f64, max_y: f64) {
+	let mut current_node = beachline.tree_minimum(beachline.root);
+	trace!("\n\n");
+	loop {
+		match beachline.nodes[current_node].item {
+			BeachItem::Leaf(_) => {},
+			BeachItem::Internal(ref breakpoint) => {
+				let this_edge = breakpoint.halfedge;
+				trace!("Extending halfedge {} with breakpoint {}, {}", this_edge, breakpoint.left_site, breakpoint.right_site);
+				let this_x = get_breakpoint_x(&breakpoint, -max_x-max_y);
+				let this_y = get_breakpoint_y(&breakpoint, -max_x-max_y);
 
-fn add_cell_records(result: &mut DCEL) { unimplemented!(); }
+				let vert = Vertex {coordinates: Point::new(this_x, this_y), incident_edge: this_edge};
+				let vert_ind = dcel.vertices.len();
+
+				dcel.halfedges[this_edge].origin = vert_ind;
+				let this_twin = dcel.halfedges[this_edge].twin;
+				dcel.halfedges[this_twin].next = this_edge;
+
+				dcel.vertices.push(vert);
+			}
+		}
+		if let Some(next_node) = beachline.successor(current_node) {
+			current_node = next_node;
+		} else { break; }
+	}
+
+}
+
+// fn add_cell_records(result: &mut DCEL) { unimplemented!(); }
 
 pub fn make_line_segments(dcel: &DCEL) -> Vec<(Point, Point)> {
 	let mut result = vec![];

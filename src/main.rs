@@ -83,20 +83,24 @@ fn main() {
         .build()
         .unwrap();
 
-    // const NUM_POINTS: u32 = 20;
+    // const NUM_POINTS: u32 = 3;
     // let mut my_pts = vec![];
     // for _ in 0..NUM_POINTS {
     // 	my_pts.push(rand::random::<Point>() * (WINDOW_SIZE as f64))
     // }
 
-    let my_pts = vec![Point::new(139., 68.),
-                        Point::new(127., 106.),
-                        Point::new(87., 77.),
-                        Point::new(71., 42.),
-                        Point::new(46., 114.)];
+    // let my_pts = vec![Point::new(139., 68.),
+    //                     Point::new(127., 106.),
+    //                     Point::new(87., 77.),
+    //                     Point::new(71., 42.),
+    //                     Point::new(46., 114.)];
+
+    let my_pts = vec![Point::new(155., 328.),
+                        Point::new(395., 226.),
+                        Point::new(78., 129.)];
 
     trace!("Computing Voronoi Diagram of {:?}", my_pts);
-    let voronoi = voronoi(my_pts.clone());
+    let voronoi = voronoi(my_pts.clone(), 400., 400.);
     trace!("\n\n");
     println!("Voronoi:\n{}", voronoi);
     let lines = make_line_segments(&voronoi);
