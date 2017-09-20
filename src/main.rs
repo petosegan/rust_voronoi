@@ -31,7 +31,7 @@ impl App {
         const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
         const RED:   [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 
-        const DOTSIZE: f64 = 5.0;
+        const DOTSIZE: f64 = 1.0;
 
         let square = rectangle::square(0.0, 0.0, DOTSIZE);
         
@@ -82,7 +82,7 @@ fn main() {
         .build()
         .unwrap();
 
-    const NUM_POINTS: u32 = 20;
+    const NUM_POINTS: u32 = 8000;
     let mut my_pts = vec![];
     for _ in 0..NUM_POINTS {
     	my_pts.push(rand::random::<Point>() * (WINDOW_SIZE as f64))

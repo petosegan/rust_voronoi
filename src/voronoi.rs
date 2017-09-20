@@ -65,10 +65,10 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 			let left_arc = beachline.get_left_arc(Some(new_node)).unwrap();
 			let this_event = VoronoiEvent::Circle {0: left_arc, 1: left_triple};
 			let circle_event_ind = queue.events.len();
-			queue.push(this_event, beachline);
 			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[left_arc].item {
 				arc.site_event = Some(circle_event_ind);
 			}
+			queue.push(this_event, beachline);
 		}
 	}
 	if let Some(right_triple) = beachline.get_rightward_triple(new_node) {
@@ -78,10 +78,10 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 			let right_arc = beachline.get_right_arc(Some(new_node)).unwrap();
 			let this_event = VoronoiEvent::Circle {0: right_arc, 1: right_triple};
 			let circle_event_ind = queue.events.len();
-			queue.push(this_event, beachline);
 			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[right_arc].item {
 				arc.site_event = Some(circle_event_ind);
 			}
+			queue.push(this_event, beachline);
 		}
 	}
 }
@@ -316,10 +316,10 @@ fn handle_circle_event(
 			trace!("Found converging triple");
 			let this_event = VoronoiEvent::Circle {0: left_neighbor, 1: left_triple};
 			let circle_event_ind = queue.events.len();
-			queue.push(this_event, beachline);
 			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[left_neighbor].item {
 				arc.site_event = Some(circle_event_ind);
 			}
+			queue.push(this_event, beachline);
 		}
 	}
 	if let Some(right_triple) = beachline.get_centered_triple(right_neighbor) {
@@ -328,10 +328,10 @@ fn handle_circle_event(
 			trace!("Found converging triple");
 			let this_event = VoronoiEvent::Circle {0: right_neighbor, 1: right_triple};
 			let circle_event_ind = queue.events.len();
-			queue.push(this_event, beachline);
 			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[right_neighbor].item {
 				arc.site_event = Some(circle_event_ind);
 			}
+			queue.push(this_event, beachline);
 		}
 	}
 }
