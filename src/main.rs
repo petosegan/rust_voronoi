@@ -61,6 +61,7 @@ impl App {
     }
 }
 
+#[allow(unused_must_use)]
 fn main() {
     env_logger::init();
 
