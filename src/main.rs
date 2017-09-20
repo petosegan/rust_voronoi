@@ -6,6 +6,7 @@ extern crate glutin_window;
 extern crate opengl_graphics;
 extern crate voronoi_gen;
 extern crate rand;
+extern crate stopwatch;
 
 use piston::window::WindowSettings;
 use piston::event_loop::*;
@@ -13,6 +14,7 @@ use piston::input::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{ GlGraphics, OpenGL };
 use voronoi_gen::{Point, voronoi, make_line_segments};
+use stopwatch::{Stopwatch};
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
@@ -66,48 +68,54 @@ fn main() {
     env_logger::init();
 
     // Change this to OpenGL::V2_1 if not working.
-    let opengl = OpenGL::V3_2;
+    // let opengl = OpenGL::V3_2;
 
     const WINDOW_SIZE: u32 = 800;
 
-    // Create an Glutin window.
-    let mut window: Window = WindowSettings::new(
-            "voronoi-gen",
-            [WINDOW_SIZE, WINDOW_SIZE]
-        )
-        .opengl(opengl)
-        .exit_on_esc(true)
-        .build()
-        .unwrap();
+    // // Create an Glutin window.
+    // let mut window: Window = WindowSettings::new(
+    //         "voronoi-gen",
+    //         [WINDOW_SIZE, WINDOW_SIZE]
+    //     )
+    //     .opengl(opengl)
+    //     .exit_on_esc(true)
+    //     .build()
+    //     .unwrap();
 
-    const NUM_POINTS: u32 = 1000;
+    const NUM_POINTS: u32 = 4000;
     let mut my_pts = vec![];
     for _ in 0..NUM_POINTS {
     	my_pts.push(rand::random::<Point>() * (WINDOW_SIZE as f64))
     }
 
+    let vor_pts = my_pts.clone();
     trace!("Computing Voronoi Diagram of {:?}", my_pts);
-    let voronoi = voronoi(my_pts.clone());
+    let sw = Stopwatch::start_new();
+    let voronoi = voronoi(vor_pts);
+    println!("Voronoi of {} pts took {}ms", NUM_POINTS, sw.elapsed_ms());
     trace!("\n\n");
     trace!("Voronoi:\n{}", voronoi);
+
+    let sw_lines = Stopwatch::start_new();
     let lines = make_line_segments(&voronoi);
+    println!("Making line segments took {}ms", sw_lines.elapsed_ms());
     trace!("Lines:\n{:?}", lines);
 
     // Create a new game and run it.
-    let mut app = App {
-        gl: GlGraphics::new(opengl),
-        points: my_pts,
-        lines: lines
-    };
+    // let mut app = App {
+    //     gl: GlGraphics::new(opengl),
+    //     points: my_pts,
+    //     lines: lines
+    // };
 
-    let mut events = Events::new(EventSettings::new());
-    while let Some(e) = events.next(&mut window) {
-        if let Some(r) = e.render_args() {
-            app.render(&r);
-        }
+    // let mut events = Events::new(EventSettings::new());
+    // while let Some(e) = events.next(&mut window) {
+    //     if let Some(r) = e.render_args() {
+    //         app.render(&r);
+    //     }
 
-        if let Some(u) = e.update_args() {
-            app.update(&u);
-        }
-    }
+    //     if let Some(u) = e.update_args() {
+    //         app.update(&u);
+    //     }
+    // }
 }
