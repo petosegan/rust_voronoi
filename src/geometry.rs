@@ -19,7 +19,7 @@ pub fn circle_bottom(triple_site: TripleSite) -> OrderedFloat<f64> {
 
 // TODO: handle all the special cases
 pub fn circle_center(triple_site: TripleSite) -> Point {
-	trace!("Finding center for {}, {}, {}", triple_site.0, triple_site.1, triple_site.2);
+	// trace!("Finding center for {}, {}, {}", triple_site.0, triple_site.1, triple_site.2);
 	let (p1, p2, p3) = triple_site;
 	let x1 = p1.x();
 	let x2 = p2.x();
@@ -41,7 +41,7 @@ pub fn circle_center(triple_site: TripleSite) -> Point {
 	let y_cen = numer / denom;
 
 	let x_cen = (c2 - b2 * y_cen) / a2;
-	trace!("center at {}, {}", x_cen, y_cen);
+	// trace!("center at {}, {}", x_cen, y_cen);
 
 	return Point::new(x_cen, y_cen);
 }

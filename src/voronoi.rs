@@ -18,6 +18,7 @@ pub fn voronoi(points: Vec<Point>) -> DCEL {
 	while !event_queue.is_empty() {
 		trace!("\n\n");
 		trace!("Beachline: {}", beachline);
+		trace!("Queue: {}", event_queue);
 		let this_event = event_queue.pop(&mut beachline).unwrap();
 		trace!("Popped event from queue: {}", this_event);
 		handle_event(this_event, &mut event_queue, &mut beachline, &mut result);
@@ -51,6 +52,7 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 		arc.site_event = None;
 	}
 	if let Some(circle_node) = circle_event {
+		debug!("arc_above was node {}, removing false alarm at event {}", arc_above, circle_node);
 		queue.remove(circle_node, beachline);
 	}
 
@@ -238,12 +240,22 @@ fn handle_circle_event(
 	let (pred, succ, parent, other) = delete_leaf(leaf, beachline);
 
 	// removing site events involving disappearing arc
+	let mut center_circle_event = None;
+	if let BeachItem::Leaf(ref mut arc) = beachline.nodes[leaf].item {
+		center_circle_event = arc.site_event;
+		arc.site_event = None;
+	}
+	if let Some(circle_node) = center_circle_event {
+		debug!("leaf {} is disappearing, so remove site event for node {}", leaf, leaf);
+		queue.remove(circle_node, beachline);
+	}
 	let mut left_circle_event = None;
 	if let BeachItem::Leaf(ref mut arc) = beachline.nodes[left_neighbor].item {
 		left_circle_event = arc.site_event;
 		arc.site_event = None;
 	}
 	if let Some(circle_node) = left_circle_event {
+		debug!("leaf {} is disappearing, so remove site event for node {}", leaf, left_neighbor);
 		queue.remove(circle_node, beachline);
 	}
 	let mut right_circle_event = None;
@@ -252,6 +264,7 @@ fn handle_circle_event(
 		arc.site_event = None;
 	}
 	if let Some(circle_node) = right_circle_event {
+		debug!("leaf {} is disappearing, so remove site event for node {}", leaf, right_neighbor);
 		queue.remove(circle_node, beachline);
 	}
 

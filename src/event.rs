@@ -49,6 +49,19 @@ fn left_child(node: usize) -> usize {
 	2 * node + 2
 }
 
+impl fmt::Display for EventQueue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    	let mut queue_disp = String::new();
+
+        for (index, event) in self.events.iter().enumerate() {
+            queue_disp.push_str(format!("{}: {}", index, event).as_str());
+            queue_disp.push_str("\n");
+        }
+
+        write!(f, "\n{}", queue_disp)
+    }
+}
+
 // TODO: implement priority queue with deletion
 impl EventQueue {
 	pub fn new() -> Self {
@@ -135,6 +148,19 @@ impl EventQueue {
 		self.swap(0, heapsize, beachline);
 		let result = self.events.pop();
 
+		let mut this_leaf = NIL;
+		if let Some(VoronoiEvent::Circle(leaf, _)) = result {
+			this_leaf = leaf;
+		}
+		if this_leaf != NIL {
+			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[this_leaf].item {
+				debug!("popped circle event, so pointed arc {} to None", this_leaf);
+				arc.site_event = None;
+			} else {
+				panic!("circle event pointed to non-arc!");
+			}
+		}
+
 		if !self.is_empty() {
 			self.bubble_down(0, beachline);
 		}
@@ -145,8 +171,23 @@ impl EventQueue {
 		let heapsize = self.events.len()-1;
 		debug!("removing node {}, heapsize is {}", removed, heapsize);
 		self.swap(removed, heapsize, beachline);
-		self.events.pop();
+		let removed_event = self.events.pop();
+
+		let mut this_leaf = NIL;
+		if let Some(VoronoiEvent::Circle(leaf, _)) = removed_event {
+			this_leaf = leaf;
+		}
+		if this_leaf != NIL {
+			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[this_leaf].item {
+				debug!("removed circle event, so pointed arc {} to None", this_leaf);
+				arc.site_event = None;
+			} else {
+				panic!("circle event pointed to non-arc!");
+			}
+		}
+
 		if self.is_empty() { return; }
+		if removed >= self.events.len() { return; }
 
 		// re-establish heap property
 		let bubble_key = self.events[removed].get_y();
