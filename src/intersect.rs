@@ -1,54 +1,8 @@
 use point::Point;
 use segment_queue::{SegmentQueue, SegmentEvent};
+use sweepline::SweepLine;
 
 type Segment = [Point; 2];
-
-struct SweepLine {
-    nodes: Vec<SweepNode>
-}
-
-impl SweepLine {
-    pub fn new() -> Self {
-        SweepLine { nodes: vec![] }
-    }
-    pub fn get_lower_segments(&self, pt: Point) -> Vec<Segment> {
-        unimplemented!();
-    }
-    pub fn get_container_segments(&self, pt: Point) -> Vec<Segment> { 
-        unimplemented!();
-    }
-    pub fn remove_all(&mut self, segs: Vec<Segment>) {
-        unimplemented!();
-    }
-    pub fn insert_all(&mut self, segs: Vec<Segment>) {
-        unimplemented!();
-    }
-    pub fn pt_left_neighbor(&self, pt: Point) -> Segment {
-        unimplemented!();
-    }
-    pub fn pt_right_neighbor(&self, pt: Point) -> Segment {
-        unimplemented!();
-    }
-    pub fn left_neighbor(&self, seg: Segment) -> Segment {
-        unimplemented!();
-    }
-    pub fn right_neighbor(&self, seg: Segment) -> Segment {
-        unimplemented!();
-    }
-    pub fn leftmost_of(&self, segs: Vec<Segment>) -> Segment {
-        unimplemented!();
-    }
-    pub fn rightmost_of(&self, segs: Vec<Segment>) -> Segment {
-        unimplemented!();
-    }
-}
-
-struct SweepNode {
-    parent: Option<usize>,
-    left_child: Option<usize>,
-    right_child: Option<usize>,
-    segment: Segment,
-}
 
 pub fn all_intersections(segments: Vec<Segment>) -> Vec<(Point, Vec<Segment>)> {
     let mut queue = SegmentQueue::new();
