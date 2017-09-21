@@ -1,14 +1,53 @@
 use point::Point;
+use segment_queue::{SegmentQueue, SegmentEvent};
 
 type Segment = [Point; 2];
 
-struct SegmentQueue {
-    segments: Vec<SegmentEvent>
+struct SweepLine {
+    nodes: Vec<SweepNode>
 }
 
-struct SegmentEvent {
-    point: Point,
-    segment: 
+impl SweepLine {
+    pub fn new() -> Self {
+        SweepLine { nodes: vec![] }
+    }
+    pub fn get_lower_segments(&self, pt: Point) -> Vec<Segment> {
+        unimplemented!();
+    }
+    pub fn get_container_segments(&self, pt: Point) -> Vec<Segment> { 
+        unimplemented!();
+    }
+    pub fn remove_all(&mut self, segs: Vec<Segment>) {
+        unimplemented!();
+    }
+    pub fn insert_all(&mut self, segs: Vec<Segment>) {
+        unimplemented!();
+    }
+    pub fn pt_left_neighbor(&self, pt: Point) -> Segment {
+        unimplemented!();
+    }
+    pub fn pt_right_neighbor(&self, pt: Point) -> Segment {
+        unimplemented!();
+    }
+    pub fn left_neighbor(&self, seg: Segment) -> Segment {
+        unimplemented!();
+    }
+    pub fn right_neighbor(&self, seg: Segment) -> Segment {
+        unimplemented!();
+    }
+    pub fn leftmost_of(&self, segs: Vec<Segment>) -> Segment {
+        unimplemented!();
+    }
+    pub fn rightmost_of(&self, segs: Vec<Segment>) -> Segment {
+        unimplemented!();
+    }
+}
+
+struct SweepNode {
+    parent: Option<usize>,
+    left_child: Option<usize>,
+    right_child: Option<usize>,
+    segment: Segment,
 }
 
 pub fn all_intersections(segments: Vec<Segment>) -> Vec<(Point, Vec<Segment>)> {
@@ -17,54 +56,65 @@ pub fn all_intersections(segments: Vec<Segment>) -> Vec<(Point, Vec<Segment>)> {
     let mut result = vec![];
 
     for segment in segments {
-        queue.push(segment);
+        queue.insert_seg(segment);
     }
 
     while !queue.is_empty() {
-        let this_event = queue.pop();
-        let this_intersection = handle_event_point(this_event.point, &mut sweepline, &mut queue);
+        let this_event = queue.pop().unwrap();
+        let this_intersection = handle_event_point(this_event, &mut sweepline, &mut queue);
         if let Some(this_intersection) = this_intersection {
             result.push(this_intersection);
         }
     }
+    return result;
 }
 
-fn handle_event_point(pt: Point, sweepline: &mut SweepLine, queue: &mut queue) -> Option<(Point, Vec<Segment>)>{
-    let upper = sweepline.get_upper_segments(pt);
+fn vec_union_2(v1: Vec<Segment>, v2: Vec<Segment>) -> Vec<Segment> {
+    unimplemented!();
+}
+
+fn vec_union_3(v1: Vec<Segment>, v2: Vec<Segment>, v3: Vec<Segment>) -> Vec<Segment> {
+    unimplemented!();
+}
+
+fn handle_event_point(event: SegmentEvent, sweepline: &mut SweepLine, queue: &mut SegmentQueue) -> Option<(Point, Vec<Segment>)>{
+    let upper = event.segments_below;
+    let pt = event.point;
     let lower = sweepline.get_lower_segments(pt);
     let container = sweepline.get_container_segments(pt);
-    let result = None;
+    let mut result = None;
 
-    let all_segs = vec_union_3(upper, lower, container);
+    let all_segs = vec_union_3(upper.clone(), lower.clone(), container.clone());
     if all_segs.len() > 1 {
-        result = (pt, all_segs);
+        result = Some((pt, all_segs));
     }
 
-    let lc_segs = vec_union_2(lower, container);
-    let uc_segs = vec_union_2(upper, container);
+    let lc_segs = vec_union_2(lower.clone(), container.clone());
+    let uc_segs = vec_union_2(upper.clone(), container.clone());
 
-    sweepline.remove_all(lc_segs);
-    sweepline.insert_all(uc_segs);
+    sweepline.remove_all(lc_segs.clone());
+    sweepline.insert_all(uc_segs.clone());
 
     if uc_segs.is_empty() {
-        let sl = sweepline.left_neighbor(pt);
-        let sr = sweepline.right_neighbor(pt);
+        let sl = sweepline.pt_left_neighbor(pt);
+        let sr = sweepline.pt_right_neighbor(pt);
         find_new_events(sl, sr, pt, queue);
     } else {
-        let s_prime = sweepline.leftmost_of(uc_segs);
+        let s_prime = sweepline.leftmost_of(uc_segs.clone());
         let sl = sweepline.left_neighbor(s_prime);
         find_new_events(sl, s_prime, pt, queue);
-        let s_pprime = sweepline.rightmost_of(uc_segs);
+        let s_pprime = sweepline.rightmost_of(uc_segs.clone());
         let sr = sweepline.right_neighbor(s_pprime);
         find_new_events(s_pprime, sr, pt, queue);
     }
+    return result;
 }
 
 fn find_new_events(s1: Segment, s2: Segment, pt: Point, queue: &mut SegmentQueue) {
     if let Some(intersection) = segment_intersection(s1, s2) {
         if intersection.y() < pt.y() || (intersection.y() == pt.y() && intersection.x() > pt.x()) {
             if !queue.contains(intersection) {
-                queue.insert(intersection);
+                queue.insert_pt(intersection);
             }
         }
     }

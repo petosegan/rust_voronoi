@@ -10,6 +10,7 @@ mod beachline;
 mod event;
 mod voronoi;
 mod intersect;
+mod segment_queue;
 
 pub use voronoi::voronoi;
 pub use point::Point;
