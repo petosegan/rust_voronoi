@@ -24,7 +24,6 @@ pub fn voronoi(points: Vec<Point>) -> DCEL {
 		handle_event(this_event, &mut event_queue, &mut beachline, &mut result);
 	}
 	add_bounding_box(&beachline, &mut result);
-	// add_cell_records(&mut result);
 	return result;
 }
 
@@ -364,5 +363,3 @@ fn add_bounding_box(beachline: &BeachLine, dcel: &mut DCEL) {
 	}
 
 }
-
-// fn add_cell_records(result: &mut DCEL) { unimplemented!(); }

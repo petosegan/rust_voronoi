@@ -13,13 +13,14 @@ use piston::event_loop::*;
 use piston::input::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{ GlGraphics, OpenGL };
-use voronoi_gen::{Point, voronoi, make_line_segments};
+use voronoi_gen::{Point, voronoi, make_line_segments, make_polygons, add_faces};
 use stopwatch::{Stopwatch};
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
     points: Vec<Point>,
-    lines: Vec<(Point, Point)> 
+    lines: Vec<(Point, Point)>,
+    faces: Vec<([f32; 4], Vec<Point>)>,
 }
 
 #[allow(unused_variables)]
@@ -37,6 +38,7 @@ impl App {
         
         let points = self.points.clone();
         let lines = self.lines.clone();
+        let faces = self.faces.clone();
 
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
@@ -50,10 +52,19 @@ impl App {
 	            ellipse(BLACK, square, transform, gl);
 	        }
 
-            for this_line in lines {
-                let (p1, p2) = this_line;
+            // for this_line in lines {
+            //     let (p1, p2) = this_line;
 
-                line(RED, 1.0, [p1.x(), p1.y(), p2.x(), p2.y()], c.transform, gl);
+            //     line(RED, 1.0, [p1.x(), p1.y(), p2.x(), p2.y()], c.transform, gl);
+            // }
+
+            for (this_color, this_face) in faces {
+
+                let mut poly_pts = vec![];
+                for pt in this_face {
+                    poly_pts.push([pt.x(), pt.y()]);
+                }
+                polygon(this_color, poly_pts.as_slice(), c.transform, gl);
             }
         });
     }
@@ -82,7 +93,7 @@ fn main() {
         .build()
         .unwrap();
 
-    const NUM_POINTS: u32 = 8000;
+    const NUM_POINTS: u32 = 5000;
     let mut my_pts = vec![];
     for _ in 0..NUM_POINTS {
     	my_pts.push(rand::random::<Point>() * (WINDOW_SIZE as f64))
@@ -96,23 +107,40 @@ fn main() {
 
 
     let vor_pts = my_pts.clone();
-    trace!("Computing Voronoi Diagram of {:?}", my_pts);
+    debug!("Computing Voronoi Diagram of {:?}", my_pts);
     let sw = Stopwatch::start_new();
-    let voronoi = voronoi(vor_pts);
-    println!("Voronoi of {} pts took {}ms", NUM_POINTS, sw.elapsed_ms());
-    trace!("\n\n");
-    trace!("Voronoi:\n{}", voronoi);
+    let mut voronoi = voronoi(vor_pts);
+    info!("Voronoi of {} pts took {}ms", NUM_POINTS, sw.elapsed_ms());
 
     let sw_lines = Stopwatch::start_new();
     let lines = make_line_segments(&voronoi);
-    println!("Making line segments took {}ms", sw_lines.elapsed_ms());
-    trace!("Lines:\n{:?}", lines);
+    info!("Making line segments took {}ms", sw_lines.elapsed_ms());
+    debug!("Lines:\n{:?}", lines);
+
+    let sw_faces = Stopwatch::start_new();
+    add_faces(&mut voronoi);
+    info!("Making faces took {}ms", sw_faces.elapsed_ms());
+
+    debug!("\n\n");
+    debug!("Voronoi:\n{}", voronoi);
+
+    let sw_polys = Stopwatch::start_new();
+    let faces = make_polygons(&voronoi);
+    info!("Making polygons took {}ms", sw_polys.elapsed_ms());
+
+    
+    let mut colored_faces = vec![];
+    for face in faces {
+        let this_color = [rand::random::<f32>(), rand::random::<f32>(), rand::random::<f32>(), 1.0];
+        colored_faces.push((this_color, face));
+    }
 
     // Create a new game and run it.
     let mut app = App {
         gl: GlGraphics::new(opengl),
         points: my_pts,
-        lines: lines
+        lines: lines,
+        faces: colored_faces
     };
 
     let mut events = Events::new(EventSettings::new());
