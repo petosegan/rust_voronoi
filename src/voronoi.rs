@@ -45,15 +45,7 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 	let arc_above = beachline.get_arc_above(site);
 
 	// remove false alarm from queue
-	let mut circle_event = None;
-	if let BeachItem::Leaf(ref mut arc) = beachline.nodes[arc_above].item {
-		circle_event = arc.site_event;
-		arc.site_event = None;
-	}
-	if let Some(circle_node) = circle_event {
-		debug!("arc_above was node {}, removing false alarm at event {}", arc_above, circle_node);
-		queue.remove(circle_node, beachline);
-	}
+	remove_circle_event(arc_above, queue, beachline);
 
 	let new_node = split_arc(arc_above, site, beachline, result);
 
@@ -62,12 +54,7 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 		if breakpoints_converge(left_triple) {
 			trace!("Found converging triple");
 			let left_arc = beachline.get_left_arc(Some(new_node)).unwrap();
-			let this_event = VoronoiEvent::Circle {0: left_arc, 1: left_triple};
-			let circle_event_ind = queue.events.len();
-			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[left_arc].item {
-				arc.site_event = Some(circle_event_ind);
-			}
-			queue.push(this_event, beachline);
+			make_circle_event(left_arc, left_triple, queue, beachline);
 		}
 	}
 	if let Some(right_triple) = beachline.get_rightward_triple(new_node) {
@@ -75,14 +62,29 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
 		if breakpoints_converge(right_triple) {
 			trace!("Found converging triple");
 			let right_arc = beachline.get_right_arc(Some(new_node)).unwrap();
-			let this_event = VoronoiEvent::Circle {0: right_arc, 1: right_triple};
-			let circle_event_ind = queue.events.len();
-			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[right_arc].item {
-				arc.site_event = Some(circle_event_ind);
-			}
-			queue.push(this_event, beachline);
+			make_circle_event(right_arc, right_triple, queue, beachline);
 		}
 	}
+}
+
+fn remove_circle_event(this_arc: usize, queue: &mut EventQueue, beachline: &mut BeachLine) {
+	let mut circle_event = None;
+	if let BeachItem::Leaf(ref mut arc) = beachline.nodes[this_arc].item {
+		circle_event = arc.site_event;
+		arc.site_event = None;
+	}
+	if let Some(circle_node) = circle_event {
+		queue.remove(circle_node, beachline);
+	}
+}
+
+fn make_circle_event(leaf: usize, triple: TripleSite, queue: &mut EventQueue, beachline: &mut BeachLine) {
+	let this_event = VoronoiEvent::Circle {0: leaf, 1: triple};
+	let circle_event_ind = queue.events.len();
+	if let BeachItem::Leaf(ref mut arc) = beachline.nodes[leaf].item {
+		arc.site_event = Some(circle_event_ind);
+	}
+	queue.push(this_event, beachline);
 }
 
 #[allow(non_snake_case)]
@@ -98,32 +100,15 @@ fn split_arc(arc: usize, pt: Point, beachline: &mut BeachLine, dcel: &mut DCEL) 
 
 	let (twin1, twin2) = dcel.add_twins();
 	
-	let breakpoint_AB = BreakPoint {
-		left_site: arc_pt,
-		right_site: pt,
-		halfedge: twin1,
-	};
-	let breakpoint_BA = BreakPoint {
-		left_site: pt,
-		right_site: arc_pt,
-		halfedge: twin2,
-	};
+	let breakpoint_AB = BreakPoint::new(arc_pt, pt, twin1);
+	let breakpoint_BA = BreakPoint::new(pt, arc_pt, twin2);
 
 	let internal_AB = BeachItem::Internal(breakpoint_AB);
 	let internal_BA = BeachItem::Internal(breakpoint_BA);
 
-	let arc_A1 = Arc {
-		site: arc_pt,
-		site_event: None,
-	};
-	let arc_A2 = Arc {
-		site: arc_pt,
-		site_event: None,
-	};
-	let arc_B = Arc {
-		site: pt,
-		site_event: None,
-	};
+	let arc_A1 = Arc::new(arc_pt, None);
+	let arc_A2 = Arc::new(arc_pt, None);
+	let arc_B = Arc::new(pt, None);
 
 	let leaf_A1 = BeachItem::Leaf(arc_A1);
 	let leaf_A2 = BeachItem::Leaf(arc_A2);
@@ -176,6 +161,7 @@ fn delete_leaf(leaf: usize, beachline: &mut BeachLine) -> (usize, usize, usize, 
 	
 	let other = if parent == pred { succ } else { pred };
 
+	// find sibling
 	let sibling;
 	if beachline.nodes[parent].right_child.unwrap() == leaf {
 		sibling = beachline.nodes[parent].left_child.unwrap();
@@ -198,30 +184,12 @@ fn delete_leaf(leaf: usize, beachline: &mut BeachLine) -> (usize, usize, usize, 
 	// correct the site on 'other'
 	if other == pred {
 		let new_other_succ = beachline.successor(other).unwrap();
-		let new_site;
-		if let BeachItem::Leaf(ref arc) = beachline.nodes[new_other_succ].item {
-			new_site = arc.site;
-		} else {
-			panic!("successor of breakpoint should be a leaf");
-		}
-		if let BeachItem::Internal(ref mut bp) = beachline.nodes[other].item {
-			bp.right_site = new_site;
-		} else {
-			panic!("predecessor and successor of leaf should be internal");
-		}
+		let new_site = beachline.get_site(Some(new_other_succ)).unwrap();
+		beachline.set_right_site(other, new_site);
 	} else {
 		let new_other_pred = beachline.predecessor(other).unwrap();
-		let new_site;
-		if let BeachItem::Leaf(ref arc) = beachline.nodes[new_other_pred].item {
-			new_site = arc.site;
-		} else {
-			panic!("predecessor of breakpoint should be a leaf");
-		}
-		if let BeachItem::Internal(ref mut bp) = beachline.nodes[other].item {
-			bp.left_site = new_site;
-		} else {
-			panic!("predecessor and successor of leaf should be internal");
-		}
+		let new_site = beachline.get_site(Some(new_other_pred)).unwrap();
+		beachline.set_left_site(other, new_site);
 	}
 
 	(pred, succ, parent, other)
@@ -239,61 +207,24 @@ fn handle_circle_event(
 	let (pred, succ, parent, other) = delete_leaf(leaf, beachline);
 
 	// removing site events involving disappearing arc
-	let mut center_circle_event = None;
-	if let BeachItem::Leaf(ref mut arc) = beachline.nodes[leaf].item {
-		center_circle_event = arc.site_event;
-		arc.site_event = None;
-	}
-	if let Some(circle_node) = center_circle_event {
-		debug!("leaf {} is disappearing, so remove site event for node {}", leaf, leaf);
-		queue.remove(circle_node, beachline);
-	}
-	let mut left_circle_event = None;
-	if let BeachItem::Leaf(ref mut arc) = beachline.nodes[left_neighbor].item {
-		left_circle_event = arc.site_event;
-		arc.site_event = None;
-	}
-	if let Some(circle_node) = left_circle_event {
-		debug!("leaf {} is disappearing, so remove site event for node {}", leaf, left_neighbor);
-		queue.remove(circle_node, beachline);
-	}
-	let mut right_circle_event = None;
-	if let BeachItem::Leaf(ref mut arc) = beachline.nodes[right_neighbor].item {
-		right_circle_event = arc.site_event;
-		arc.site_event = None;
-	}
-	if let Some(circle_node) = right_circle_event {
-		debug!("leaf {} is disappearing, so remove site event for node {}", leaf, right_neighbor);
-		queue.remove(circle_node, beachline);
-	}
+	remove_circle_event(leaf, queue, beachline);
+	remove_circle_event(left_neighbor, queue, beachline);
+	remove_circle_event(right_neighbor, queue, beachline);
 
 	let (twin1, twin2) = dcel.add_twins();
 
+	// make a vertex at the circle center
 	let circle_center = circle_center(triplesite);
 	let center_vertex = Vertex { coordinates: circle_center, incident_edge: twin1};
 	let center_vertex_ind = dcel.vertices.len();
 	dcel.vertices.push(center_vertex);
 
-	let pred_edge = {
-		if let BeachItem::Internal(ref breakpoint) = beachline.nodes[pred].item {
-			breakpoint.halfedge
-		} else {panic!("predecessor should be Internal");}
-	};
-	let succ_edge = {
-		if let BeachItem::Internal(ref breakpoint) = beachline.nodes[succ].item {
-			breakpoint.halfedge
-		} else {panic!("successor should be Internal");}
-	};
-	let parent_edge = {
-		if let BeachItem::Internal(ref breakpoint) = beachline.nodes[parent].item {
-			breakpoint.halfedge
-		} else {panic!("parent should be Internal");}
-	};
-	let other_edge = {
-		if let BeachItem::Internal(ref breakpoint) = beachline.nodes[other].item {
-			breakpoint.halfedge
-		} else {panic!("other should be Internal");}
-	};
+	// hook up next pointers on halfedges
+	let pred_edge = beachline.get_edge(pred);
+	let succ_edge = beachline.get_edge(succ);
+	let parent_edge = beachline.get_edge(parent);
+	let other_edge = beachline.get_edge(other);
+
 	let pred_edge_twin = dcel.halfedges[pred_edge].twin;
 	let succ_edge_twin = dcel.halfedges[succ_edge].twin;
 
@@ -313,28 +244,19 @@ fn handle_circle_event(
 		trace!("Checking leftward triple {}, {}, {}", left_triple.0, left_triple.1, left_triple.2);
 		if breakpoints_converge(left_triple) {
 			trace!("Found converging triple");
-			let this_event = VoronoiEvent::Circle {0: left_neighbor, 1: left_triple};
-			let circle_event_ind = queue.events.len();
-			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[left_neighbor].item {
-				arc.site_event = Some(circle_event_ind);
-			}
-			queue.push(this_event, beachline);
+			make_circle_event(left_neighbor, left_triple, queue, beachline);
 		}
 	}
 	if let Some(right_triple) = beachline.get_centered_triple(right_neighbor) {
 		trace!("Checking rightward triple {}, {}, {}", right_triple.0, right_triple.1, right_triple.2);
 		if breakpoints_converge(right_triple) {
 			trace!("Found converging triple");
-			let this_event = VoronoiEvent::Circle {0: right_neighbor, 1: right_triple};
-			let circle_event_ind = queue.events.len();
-			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[right_neighbor].item {
-				arc.site_event = Some(circle_event_ind);
-			}
-			queue.push(this_event, beachline);
+			make_circle_event(right_neighbor, right_triple, queue, beachline);
 		}
 	}
 }
 
+// This just extends the edges past the end of the bounding box
 fn add_bounding_box(beachline: &BeachLine, dcel: &mut DCEL) {
 	let mut current_node = beachline.tree_minimum(beachline.root);
 	trace!("\n\n");

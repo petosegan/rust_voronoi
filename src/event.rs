@@ -62,7 +62,6 @@ impl fmt::Display for EventQueue {
     }
 }
 
-// TODO: implement priority queue with deletion
 impl EventQueue {
 	pub fn new() -> Self {
 		EventQueue { events: vec![] }

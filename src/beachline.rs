@@ -79,6 +79,12 @@ impl fmt::Display for Arc {
     }
 }
 
+impl Arc {
+	pub fn new(site: Point, site_event: Option<usize>) -> Self {
+		Arc { site: site, site_event: site_event }
+	}
+}
+
 #[derive(Debug)]
 pub struct BreakPoint {
 	pub left_site: Point,
@@ -90,6 +96,12 @@ impl fmt::Display for BreakPoint {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     	write!(f, "left: {}, right: {}, halfedge: {}", self.left_site, self.right_site, self.halfedge)
     }
+}
+
+impl BreakPoint {
+	pub fn new(left_site: Point, right_site: Point, halfedge: usize) -> Self {
+		BreakPoint { left_site: left_site, right_site: right_site, halfedge: halfedge }
+	}
 }
 
 impl BeachLine {
@@ -220,5 +232,24 @@ impl BeachLine {
 		} else {
 			return None;
 		}
+	}
+	pub fn set_right_site(&mut self, node: usize, site: Point) {
+		if let BeachItem::Internal(ref mut bp) = self.nodes[node].item {
+			bp.right_site = site;
+		} else {
+			panic!("target of set_site should be internal");
+		}
+	}
+	pub fn set_left_site(&mut self, node: usize, site: Point) {
+		if let BeachItem::Internal(ref mut bp) = self.nodes[node].item {
+			bp.left_site = site;
+		} else {
+			panic!("target of set_site should be internal");
+		}
+	}
+	pub fn get_edge(&self, node: usize) -> usize {
+		if let BeachItem::Internal(ref breakpoint) = self.nodes[node].item {
+			breakpoint.halfedge
+		} else {panic!("get_edge target should be Internal");}
 	}
 }
