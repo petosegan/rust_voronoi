@@ -2,8 +2,9 @@ use rand::{Rand, Rng, random};
 use std::ops::{Sub, Mul, Add};
 use std::fmt;
 use ordered_float::OrderedFloat;
+use std::cmp::Ordering;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct Point {
 	pub x: OrderedFloat<f64>,
 	pub y: OrderedFloat<f64>
@@ -62,4 +63,21 @@ impl Point {
 	pub fn cross(self, rhs: Point) -> f64 {
 		self.x() * rhs.y() - self.y() * rhs.x()
 	}
+}
+
+impl PartialOrd for Point {
+    fn partial_cmp(&self, other: &Point) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Point {
+    fn cmp(&self, other: &Point) -> Ordering {
+        if self.y > other.y { return Ordering::Greater; }
+        else if self.y == other.y {
+        	if self.x < other.x { return Ordering::Greater; }
+        	else if self.x == other.x { return Ordering::Equal; }
+        	else { return Ordering::Less; }
+        } else { return Ordering::Less; }
+    }
 }

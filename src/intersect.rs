@@ -1,6 +1,7 @@
 use point::Point;
 use segment_queue::{SegmentQueue, SegmentEvent};
 use sweepline::SweepLine;
+use std::collections::HashSet;
 
 type Segment = [Point; 2];
 
@@ -23,14 +24,6 @@ pub fn all_intersections(segments: Vec<Segment>) -> Vec<(Point, Vec<Segment>)> {
     return result;
 }
 
-fn vec_union_2(v1: Vec<Segment>, v2: Vec<Segment>) -> Vec<Segment> {
-    unimplemented!();
-}
-
-fn vec_union_3(v1: Vec<Segment>, v2: Vec<Segment>, v3: Vec<Segment>) -> Vec<Segment> {
-    unimplemented!();
-}
-
 fn handle_event_point(event: SegmentEvent, sweepline: &mut SweepLine, queue: &mut SegmentQueue) -> Option<(Point, Vec<Segment>)>{
     let upper = event.segments_below;
     let pt = event.point;
@@ -38,13 +31,13 @@ fn handle_event_point(event: SegmentEvent, sweepline: &mut SweepLine, queue: &mu
     let container = sweepline.get_container_segments(pt);
     let mut result = None;
 
-    let all_segs = vec_union_3(upper.clone(), lower.clone(), container.clone());
-    if all_segs.len() > 1 {
-        result = Some((pt, all_segs));
-    }
+    let lc_segs: HashSet<_> = lower.union(&container).cloned().collect();
+    let uc_segs: HashSet<_>  = upper.union(&container).cloned().collect();
+    let all_segs: HashSet<_>  = upper.union(&lc_segs).cloned().collect();
 
-    let lc_segs = vec_union_2(lower.clone(), container.clone());
-    let uc_segs = vec_union_2(upper.clone(), container.clone());
+    if all_segs.len() > 1 {
+        result = Some((pt, all_segs.iter().cloned().collect::<Vec<_>>()));
+    }
 
     sweepline.remove_all(lc_segs.clone());
     sweepline.insert_all(uc_segs.clone());

@@ -1,5 +1,6 @@
 use point::Point;
 use std::fmt;
+use std::collections::HashSet;
 type Segment = [Point; 2];
 
 pub struct SweepLine {
@@ -23,16 +24,16 @@ impl SweepLine {
     pub fn new() -> Self {
         SweepLine { nodes: vec![] }
     }
-    pub fn get_lower_segments(&self, pt: Point) -> Vec<Segment> {
+    pub fn get_lower_segments(&self, pt: Point) -> HashSet<Segment> {
         unimplemented!();
     }
-    pub fn get_container_segments(&self, pt: Point) -> Vec<Segment> { 
+    pub fn get_container_segments(&self, pt: Point) -> HashSet<Segment> { 
         unimplemented!();
     }
-    pub fn remove_all(&mut self, segs: Vec<Segment>) {
+    pub fn remove_all(&mut self, segs: HashSet<Segment>) {
         unimplemented!();
     }
-    pub fn insert_all(&mut self, segs: Vec<Segment>) {
+    pub fn insert_all(&mut self, segs: HashSet<Segment>) {
         unimplemented!();
     }
     pub fn pt_left_neighbor(&self, pt: Point) -> Segment {
@@ -47,10 +48,10 @@ impl SweepLine {
     pub fn right_neighbor(&self, seg: Segment) -> Segment {
         unimplemented!();
     }
-    pub fn leftmost_of(&self, segs: Vec<Segment>) -> Segment {
+    pub fn leftmost_of(&self, segs: HashSet<Segment>) -> Segment {
         unimplemented!();
     }
-    pub fn rightmost_of(&self, segs: Vec<Segment>) -> Segment {
+    pub fn rightmost_of(&self, segs: HashSet<Segment>) -> Segment {
         unimplemented!();
     }
 }
