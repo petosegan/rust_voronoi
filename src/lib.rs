@@ -9,6 +9,7 @@ mod dcel;
 mod beachline;
 mod event;
 mod voronoi;
+mod intersect;
 
 pub use voronoi::voronoi;
 pub use point::Point;

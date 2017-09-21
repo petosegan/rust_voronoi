@@ -93,3 +93,20 @@ pub fn get_breakpoint_y(bp: &BreakPoint, yl: f64) -> f64 {
 
 	return numer / denom + (py + yl) / 2.;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn simple_circle_center() {
+    	let circle_triple = (Point::new(-1.0, 0.0), Point::new(0.0, 1.0), Point::new(1.0, 0.0));
+        assert_eq!(circle_center(circle_triple), Point::new(0.0, 0.0));
+    }
+
+    #[test]
+    fn simple_circle_bottom() {
+    	let circle_triple = (Point::new(-1.0, 0.0), Point::new(0.0, 1.0), Point::new(1.0, 0.0));
+    	assert_eq!(circle_bottom(circle_triple), OrderedFloat(-1.0));
+    }
+}

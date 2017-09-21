@@ -1,5 +1,5 @@
 use rand::{Rand, Rng, random};
-use std::ops::Mul;
+use std::ops::{Sub, Mul, Add};
 use std::fmt;
 use ordered_float::OrderedFloat;
 
@@ -39,5 +39,27 @@ impl Mul<f64> for Point {
 
 	fn mul(self, _rhs: f64) -> Point {
 		Point::new(self.x.into_inner() * _rhs, self.y.into_inner() * _rhs)
+	}
+}
+
+impl Sub<Point> for Point {
+	type Output = Point;
+
+	fn sub(self, _rhs: Point) -> Point {
+		Point::new(self.x() - _rhs.x(), self.y() - _rhs.y())
+	}
+}
+
+impl Add<Point> for Point {
+	type Output = Point;
+
+	fn add(self, _rhs: Point) -> Point {
+		Point::new(self.x() + _rhs.x(), self.y() + _rhs.y())
+	}
+}
+
+impl Point {
+	pub fn cross(self, rhs: Point) -> f64 {
+		self.x() * rhs.y() - self.y() * rhs.x()
 	}
 }
