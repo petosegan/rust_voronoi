@@ -1,20 +1,7 @@
 use std::fmt;
 use point::Point;
 use std::collections::HashSet;
-
-type Segment = [Point; 2];
-
-fn get_upper_point(seg: Segment) -> Point {
-    let p0 = seg[0];
-    let p1 = seg[1];
-    if p0 > p1 { p0 } else { p1 }
-}
-
-fn get_lower_point(seg: Segment) -> Point {
-    let p0 = seg[0];
-    let p1 = seg[1];
-    if p0 > p1 { p1 } else { p0 }
-}
+use intersect::{Segment, get_upper_point, get_lower_point};
 
 pub struct SegmentQueue {
     events: Vec<SegmentNode>,
@@ -37,6 +24,27 @@ impl SegmentQueue {
     }
     pub fn insert_pt(&mut self, pt: Point) {
         self.insert_event(SegmentEvent {point: pt, segments_below: HashSet::new() });
+    }
+    fn is_leaf(&self, node: usize) -> bool {
+        self.events[node].right_child == None && self.events[node].left_child == None
+    }
+    fn search(&self, pt: Point) -> Option<usize> {
+        let mut current_node = self.root;
+        loop {
+            if let None = current_node { return None; }
+            let current_node_ind = current_node.unwrap();
+
+            if self.is_leaf(current_node_ind) {
+                if self.events[current_node_ind].event.point == pt { return Some(current_node_ind); }
+                else { return None; }
+            }
+
+            if pt > self.events[current_node_ind].event.point {
+                current_node = self.events[current_node_ind].right_child;
+            } else {
+                current_node = self.events[current_node_ind].left_child;
+            }
+        }
     }
     // TODO: check if point already exists, and if so merge segments_below
     pub fn insert_event(&mut self, event: SegmentEvent) {
@@ -129,7 +137,11 @@ impl SegmentQueue {
         self.root == None
     }
     pub fn contains(&self, pt: Point) -> bool {
-        unimplemented!();
+        if let None = self.search(pt) {
+            false
+        } else {
+            true
+        }
     }
 }
 
@@ -142,7 +154,7 @@ impl fmt::Display for SegmentQueue {
             queue_disp.push_str("\n");
         }
 
-        write!(f, "\n{}", queue_disp)
+        write!(f, "\nroot: {:?}\n{}", self.root, queue_disp)
     }
 }
 
@@ -171,6 +183,6 @@ impl fmt::Display for SegmentEvent {
         for seg in &self.segments_below {
             seg_disp.push_str(format!("{} to {}, ", seg[0], seg[1]).as_str());
         }
-        write!(f, "Point: {}, Segments_Below: {}\n", self.point, seg_disp)
+        write!(f, "Point: {}, Segments_Below: {}", self.point, seg_disp)
     }
 }

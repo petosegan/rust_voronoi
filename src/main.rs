@@ -91,7 +91,7 @@ impl App {
 
 #[allow(unused_must_use)]
 fn main() {
-    env_logger::init();
+    let _ = env_logger::init();
 
     // Change this to OpenGL::V2_1 if not working.
     let opengl = OpenGL::V3_2;

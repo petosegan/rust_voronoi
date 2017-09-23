@@ -63,6 +63,9 @@ impl Point {
 	pub fn cross(self, rhs: Point) -> f64 {
 		self.x() * rhs.y() - self.y() * rhs.x()
 	}
+	pub fn dot(self, rhs: Point) -> f64 {
+		self.x() * rhs.x() + self.y() * rhs.y()
+	}
 }
 
 impl PartialOrd for Point {
