@@ -4,6 +4,8 @@ use std::collections::HashSet;
 use intersect::{Segment, get_lower_point, segment_intersection, seg_length};
 
 use ordered_float::OrderedFloat;
+extern crate env_logger;
+
 
 const EPSILON: f64 = 0.001; // lol
 
@@ -14,7 +16,11 @@ pub struct SweepLine {
 }
 
 fn seg_is_right_of_seg(seg1: Segment, seg2: Segment, y_line: f64) -> bool {
-    get_segment_x(seg1, y_line) > get_segment_x(seg2, y_line)
+    // trace!("Checking if {} to {} is right of {} to {}", seg1[0], seg1[1], seg2[0], seg2[1]);
+    let result = get_segment_x(seg1, y_line) > get_segment_x(seg2, y_line);
+    // if result { trace!("yes, it is."); }
+    // else { trace!("no, it isn't"); }
+    return result;
 }
 
 fn pt_is_right_of_seg(pt: Point, seg: Segment, y_line: f64) -> bool {
@@ -44,7 +50,13 @@ fn get_segment_x(seg: Segment, y_line: f64) -> OrderedFloat<f64> {
     // handle horizontal segments
     if seg[0].y() == seg[1].y() {
         if seg[0].y() == y_line { 
-            if seg[0] > seg[1] { return seg[0].x; } else { return seg[1].x; }
+            if seg[0] > seg[1] { 
+                // trace!("Horizontal! segment_x was {}", seg[1].x);
+                return seg[1].x; 
+            } else { 
+                // trace!("Horizontal! segment_x was {}", seg[0].x);
+                return seg[0].x; 
+            }
         }
     }
     let mut x0 = seg[0].x();
@@ -53,9 +65,10 @@ fn get_segment_x(seg: Segment, y_line: f64) -> OrderedFloat<f64> {
         x0 -= 0.5;
         x1 += 0.5
     }
-    let y_segment = [Point::new(x0, y_line), Point::new(x1, y_line)];
+    let y_segment = [Point::new(x0, y_line - EPSILON), Point::new(x1, y_line - EPSILON)];
     let intersection = segment_intersection(seg, y_segment);
     if let None = intersection { panic!("invalid get_segment_x for {} to {} at y_line = {}", seg[0], seg[1], y_line); }
+    // trace!("segment_x was {}", intersection.unwrap().x);
     return intersection.unwrap().x;
 }
 
@@ -83,15 +96,16 @@ impl SweepLine {
         self.nodes[node].right_child == None && self.nodes[node].left_child == None
     }
     fn remove_segment(&mut self, seg: Segment) {
-        trace!("Removing segment {} to {} from sweepline", seg[0], seg[1]);
+        info!("Removing segment {} to {} from sweepline", seg[0], seg[1]);
         let seg_node = self.search(seg);
         if let None = seg_node { panic!("tried to remove segment that is not in sweepline"); }
         let seg_node = seg_node.unwrap();
 
         self.remove(seg_node);
     }
+    #[allow(unused_assignments)]
     fn insert_segment(&mut self, seg: Segment) {
-        trace!("Inserting segment {} to {} in sweepline", seg[0], seg[1]);
+        info!("Inserting segment {} to {} in sweepline", seg[0], seg[1]);
         let seg_node = self.search(seg);
         if let Some(_) = seg_node { panic!("tried to insert segment that is already in sweepline"); }
         let mut current_parent = None;
@@ -107,6 +121,7 @@ impl SweepLine {
             let current_node_ind = current_node.unwrap();
 
             if self.is_leaf(current_node_ind) {
+                trace!("inserting at node {}", current_node_ind);
                 let new_internal_ind = self.nodes.len();
                 let mut new_internal_left = None;
                 let mut new_internal_right = None;
@@ -114,6 +129,7 @@ impl SweepLine {
                 new_node_parent = Some(new_internal_ind);
 
                 if let None = current_parent {
+                    trace!("tree was a singleton");
                     self.root = Some(new_internal_ind);
                 } else {
                     let parent_ind: usize = current_parent.unwrap();
@@ -140,11 +156,11 @@ impl SweepLine {
                 }
 
                 self.nodes[current_node_ind].parent = Some(new_internal_ind);
-
-                self.nodes.push(SweepNode { parent: current_parent,
+                let internal_node = SweepNode { parent: current_parent,
                                                 left_child: new_internal_left,
                                                 right_child: new_internal_right,
-                                                segment: new_internal_seg});
+                                                segment: new_internal_seg};
+                self.nodes.push(internal_node);
                 break;
             }
 
@@ -422,5 +438,79 @@ struct SweepNode {
 impl fmt::Display for SweepNode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "p: {:?}, l: {:?}, r: {:?}, segment: {} to {}", self.parent, self.left_child, self.right_child, self.segment[0], self.segment[1])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn horizontal_segment_order() {
+        // let _ = env_logger::init();
+        trace!("\n\n");
+
+        let line1 = [Point::new(0.0, 1.0), Point::new(2.0, 1.0)];
+        let line2 = [Point::new(1.0, 0.0), Point::new(1.0, 2.0)];
+
+        let mut sweepline = SweepLine::new();
+        sweepline.y_line = 1.0;
+        sweepline.insert_segment(line1);
+        sweepline.insert_segment(line2);
+        trace!("Sweepline: {}", sweepline);
+        let right_ind = sweepline.nodes[sweepline.root.unwrap()].right_child.unwrap();
+        assert!(sweepline.nodes[right_ind].segment == line1);
+    }
+    #[test]
+    #[ignore]
+    fn slanted_segment_order_1() {
+        // let _ = env_logger::init();
+        trace!("\n\n");
+
+        let line1 = [Point::new(0.0, 0.0), Point::new(2.0, 2.0)];
+        let line2 = [Point::new(1.0, 0.0), Point::new(1.0, 2.0)];
+
+        let mut sweepline = SweepLine::new();
+        sweepline.y_line = 2.0;
+        sweepline.insert_segment(line1);
+        sweepline.insert_segment(line2);
+        trace!("Sweepline: {}", sweepline);
+        let right_ind = sweepline.nodes[sweepline.root.unwrap()].right_child.unwrap();
+        assert!(sweepline.nodes[right_ind].segment == line1);
+    }
+    #[test]
+    #[ignore]
+    fn slanted_segment_order_2() {
+        // let _ = env_logger::init();
+        trace!("\n\n");
+
+        let line1 = [Point::new(0.0, 0.0), Point::new(2.0, 2.0)];
+        let line2 = [Point::new(1.0, 0.0), Point::new(1.0, 2.0)];
+
+        let mut sweepline = SweepLine::new();
+        sweepline.y_line = 1.0;
+        sweepline.insert_segment(line1);
+        sweepline.insert_segment(line2);
+        trace!("Sweepline: {}", sweepline);
+        let right_ind = sweepline.nodes[sweepline.root.unwrap()].right_child.unwrap();
+        assert!(sweepline.nodes[right_ind].segment == line2);
+    }
+    #[test]
+    #[ignore]
+    fn slanted_segment_order_3() {
+        // let _ = env_logger::init();
+        trace!("\n\n");
+
+        let line1 = [Point::new(0.0, 0.0), Point::new(2.0, 2.0)];
+        let line2 = [Point::new(1.0, 0.0), Point::new(1.0, 2.0)];
+
+        let mut sweepline = SweepLine::new();
+        sweepline.y_line = 0.5;
+        sweepline.insert_segment(line1);
+        sweepline.insert_segment(line2);
+        trace!("Sweepline: {}", sweepline);
+        let right_ind = sweepline.nodes[sweepline.root.unwrap()].right_child.unwrap();
+        assert!(sweepline.nodes[right_ind].segment == line2);
     }
 }

@@ -27,23 +27,22 @@ pub fn seg_length(seg: Segment) -> f64 {
 }
 
 pub fn all_intersections(segments: Vec<Segment>) -> Vec<(Point, Vec<Segment>)> {
-    trace!("Running all_intersections");
+    info!("Running all_intersections");
     let mut queue = SegmentQueue::new();
     let mut sweepline = SweepLine::new();
     let mut result = vec![];
 
     for segment in segments {
-        trace!("Inserting segment {} to {} into queue", segment[0], segment[1]);
+        info!("Inserting segment {} to {} into queue", segment[0], segment[1]);
         queue.insert_seg(segment);
     }
 
     while !queue.is_empty() {
         let this_event = queue.pop().unwrap();
-        trace!("\n\n");
+        info!("\n\n");
         trace!("Queue: {}", queue);
         trace!("Sweepline: {}", sweepline);
-        trace!("Popped event {}", this_event);
-        sweepline.y_line = this_event.point.y();
+        info!("Popped event {}", this_event);
         let this_intersection = handle_event_point(this_event, &mut sweepline, &mut queue);
         if let Some(this_intersection) = this_intersection {
             result.push(this_intersection);
@@ -64,11 +63,12 @@ fn handle_event_point(event: SegmentEvent, sweepline: &mut SweepLine, queue: &mu
     let all_segs: HashSet<_>  = upper.union(&lc_segs).cloned().collect();
 
     if all_segs.len() > 1 {
-        trace!("Found intersection at {}", pt);
+        info!("Found intersection at {}", pt);
         result = Some((pt, all_segs.iter().cloned().collect::<Vec<_>>()));
     }
 
     sweepline.remove_all(lc_segs.clone());
+    sweepline.y_line = pt.y();
     // trace!("Sweepline: {}", sweepline);
     sweepline.insert_all(uc_segs.clone());
 
@@ -100,12 +100,12 @@ fn find_new_events(s1: Option<Segment>, s2: Option<Segment>, pt: Point, queue: &
     if let None = s2 { return; }
     let s1 = s1.unwrap();
     let s2 = s2.unwrap();
-    trace!("Looking for new events from segments {} to {} and {} to {}", s1[0], s1[1], s2[0], s2[1]);
+    info!("Looking for new events from segments {} to {} and {} to {}", s1[0], s1[1], s2[0], s2[1]);
 
     if let Some(intersection) = segment_intersection(s1, s2) {
         if intersection.y() < pt.y() || (intersection.y() == pt.y() && intersection.x() > pt.x()) {
             if !queue.contains(intersection) {
-                trace!("Inserting intersection at {}", intersection);
+                info!("Inserting intersection at {}", intersection);
                 queue.insert_pt(intersection);
             }
         }
@@ -239,6 +239,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn h_intersect() {
         let _ = env_logger::init();
 
@@ -264,6 +265,35 @@ mod tests {
 
         assert!(int_pts.contains(&Point::new(1.0, 1.0)));
         assert!(int_pts.contains(&Point::new(2.0, 1.0)));
+        assert!(int_pts.len() == 2);
+    }
+
+    #[test]
+    fn slanted_h_intersect() {
+        let _ = env_logger::init();
+
+        debug!("Test on Slanted H");
+        let line1 = [Point::new(2.0, 3.0), Point::new(2.0, 1.0)];
+        let line2 = [Point::new(3.0, 3.0), Point::new(0.0, 0.0)];
+        let line3 = [Point::new(1.0, 2.0), Point::new(1.0, 0.0)];
+
+        let intersections = all_intersections(vec![line1, line2, line3]);
+        let mut int_pts = vec![];
+        for intersection in intersections {
+            int_pts.push(intersection.0)
+        }
+
+        let mut int_disp = String::new();
+
+        for pt in &int_pts {
+            int_disp.push_str(format!("{}, ", pt).as_str());
+            int_disp.push_str("\n");
+        }
+
+        println!("Intersections: {}", int_disp);
+
+        assert!(int_pts.contains(&Point::new(1.0, 1.0)));
+        assert!(int_pts.contains(&Point::new(2.0, 2.0)));
         assert!(int_pts.len() == 2);
     }
 
