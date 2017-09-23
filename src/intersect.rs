@@ -181,6 +181,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn tee_lines_intersect() {
         // let _ = env_logger::init();
 

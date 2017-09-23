@@ -41,8 +41,11 @@ fn seg_contains_pt(seg: Segment, pt: Point) -> bool {
 
 fn get_segment_x(seg: Segment, y_line: f64) -> OrderedFloat<f64> {
     // trace!("getting segment_x for {} to {} at y_line = {}", seg[0], seg[1], y_line);
+    // handle horizontal segments
     if seg[0].y() == seg[1].y() {
-        if seg[0].y() == y_line { return seg[0].x; }
+        if seg[0].y() == y_line { 
+            if seg[0] > seg[1] { return seg[0].x; } else { return seg[1].x; }
+        }
     }
     let mut x0 = seg[0].x();
     let mut x1 = seg[1].x();
@@ -72,6 +75,9 @@ impl fmt::Display for SweepLine {
 impl SweepLine {
     pub fn new() -> Self {
         SweepLine { nodes: vec![], root: None, y_line: 0.0 }
+    }
+    fn is_empty(&self) -> bool {
+        self.root == None
     }
     fn is_leaf(&self, node: usize) -> bool {
         self.nodes[node].right_child == None && self.nodes[node].left_child == None
@@ -283,85 +289,33 @@ impl SweepLine {
     pub fn get_lower_segments(&self, pt: Point) -> HashSet<Segment> {
         trace!("get_lower_segments for {}", pt);
         let mut lower_segs = HashSet::new();
-        let mut current_node = None;
-
-        let left_segment = self.pt_left_neighbor(pt);
-        if let Some(left_segment) = left_segment {
-            current_node = self.search(left_segment);
-        }
+        if self.is_empty() { return lower_segs; }
+        let mut current_node = Some(self.tree_minimum(self.root.unwrap()));
 
         while let Some(current_node_ind) = current_node {
             let this_seg = self.nodes[current_node_ind].segment;
-            trace!("Check seg {} to {}", this_seg[0], this_seg[1]);
-            if get_lower_point(this_seg) != pt { break; }
-            trace!("{} to {} is a lower segment for {}", this_seg[0], this_seg[1], pt);
-            lower_segs.insert(this_seg);
-            current_node = self.left_neighbor(current_node);
-        }
-
-        // this handles the special case of horizontal lines
-        let left_left_segment = self.segment_left_neighbor(left_segment);
-        if let Some(left_left_segment) = left_left_segment {
-            current_node = self.search(left_left_segment);
-        }
-
-        while let Some(current_node_ind) = current_node {
-            let this_seg = self.nodes[current_node_ind].segment;
-            trace!("Check seg {} to {}", this_seg[0], this_seg[1]);
-            if get_lower_point(this_seg) != pt { break; }
-            trace!("{} to {} is a lower segment for {}", this_seg[0], this_seg[1], pt);
-            lower_segs.insert(this_seg);
-            current_node = self.left_neighbor(current_node);
-        }
-
-        let right_segment = self.pt_right_neighbor(pt);
-        if let Some(right_segment) = right_segment {
-            current_node = self.search(right_segment);
-        } else {
-            current_node = None;
-        }
-
-        while let Some(current_node_ind) = current_node {
-            let this_seg = self.nodes[current_node_ind].segment;
-            trace!("Check seg {} to {}", this_seg[0], this_seg[1]);
-            if get_lower_point(this_seg) != pt { break; }
-            trace!("{} to {} is a lower segment for {}", this_seg[0], this_seg[1], pt);
-            lower_segs.insert(this_seg);
             current_node = self.right_neighbor(current_node);
+            if get_lower_point(this_seg) != pt { continue; }
+            trace!("{} to {} is a lower segment for {}", this_seg[0], this_seg[1], pt);
+            lower_segs.insert(this_seg);
         }
+
         lower_segs
     }
-    pub fn get_container_segments(&self, pt: Point) -> HashSet<Segment> { 
+    pub fn get_container_segments(&self, pt: Point) -> HashSet<Segment> {
+        trace!("get_container_segments for {}", pt);
         let mut container_segs = HashSet::new();
-        let mut current_node = None;
-
-        let left_segment = self.pt_left_neighbor(pt);
-        if let Some(left_segment) = left_segment {
-            current_node = self.search(left_segment);
-        }
+        if self.is_empty() { return container_segs; }
+        let mut current_node = Some(self.tree_minimum(self.root.unwrap()));
 
         while let Some(current_node_ind) = current_node {
             let this_seg = self.nodes[current_node_ind].segment;
-            if !seg_contains_pt(this_seg, pt) { break; }
-            trace!("{} to {} is a container segment for {}", this_seg[0], this_seg[1], pt);
-            container_segs.insert(this_seg);
-            current_node = self.left_neighbor(current_node);
-        }
-
-        let right_segment = self.pt_right_neighbor(pt);
-        if let Some(right_segment) = right_segment {
-            current_node = self.search(right_segment);
-        } else {
-            current_node = None;
-        }
-
-        while let Some(current_node_ind) = current_node {
-            let this_seg = self.nodes[current_node_ind].segment;
-            if !seg_contains_pt(this_seg, pt) { break; }
-            trace!("{} to {} is a container segment for {}", this_seg[0], this_seg[1], pt);
-            container_segs.insert(this_seg);
             current_node = self.right_neighbor(current_node);
+            if !seg_contains_pt(this_seg, pt) { continue; }
+            trace!("{} to {} is a container segment for {}", this_seg[0], this_seg[1], pt);
+            container_segs.insert(this_seg);
         }
+
         container_segs
     }
     pub fn remove_all(&mut self, segs: HashSet<Segment>) {
