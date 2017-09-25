@@ -4,3 +4,5 @@ This is a Rust implementation of Fortune's Linesweep algorithm for computing Vor
 * Handle degeneracies in geometry.rs
 * Match DCEL faces to input points
 * Reimplement the data structures with memory management
+* Balance the trees
+* Benchmark against other implementations

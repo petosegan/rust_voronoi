@@ -14,6 +14,7 @@ mod intersect;
 mod segment_queue;
 mod sweepline;
 mod lloyd;
+mod perlin;
 
 pub use voronoi::voronoi;
 pub use point::Point;
