@@ -195,18 +195,18 @@ pub fn add_faces(dcel: &mut DCEL) {
 }
 
 // does not handle the case where line goes through dcel vertex
-pub fn add_line(seg: Segment, mut dcel: DCEL) -> DCEL {
-	let mut intersections = get_line_intersections(seg, &dcel);
+pub fn add_line(seg: Segment, dcel: &mut DCEL) {
+	let mut intersections = get_line_intersections(seg, dcel);
 	intersections.sort_by(|a, b| a.0.cmp(&b.0));
 	let start_pt = if seg[0] < seg[1] { seg[0] } else { seg[1] };
 	let end_pt   = if seg[0] < seg[1] { seg[1] } else { seg[0] };
 
-	let (mut line_needs_next, mut line_needs_prev, _) = add_twins_from_pt(start_pt, &mut dcel);
+	let (mut line_needs_next, mut line_needs_prev, _) = add_twins_from_pt(start_pt, dcel);
 	dcel.halfedges[line_needs_prev].next = line_needs_next;
 	let prev_pt = start_pt;
 
 	for (int_pt, this_cut_edge) in intersections {
-		let (new_line_needs_next, new_line_needs_prev, new_pt_ind) = add_twins_from_pt(int_pt, &mut dcel);
+		let (new_line_needs_next, new_line_needs_prev, new_pt_ind) = add_twins_from_pt(int_pt, dcel);
 		dcel.halfedges[line_needs_prev].origin = new_pt_ind;
 
 		let mut cut_edge = this_cut_edge;
@@ -243,7 +243,6 @@ pub fn add_line(seg: Segment, mut dcel: DCEL) -> DCEL {
 	let end_vertex = Vertex { coordinates: end_pt, incident_edge: line_needs_prev, alive: true };
 	dcel.vertices.push(end_vertex);
 	dcel.halfedges[line_needs_prev].origin = end_vertex_ind;
-	return dcel;
 }
 
 fn makes_left_turn(pt1: Point, pt2: Point, pt3: Point) -> bool {

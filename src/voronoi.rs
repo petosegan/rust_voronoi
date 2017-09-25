@@ -1,12 +1,12 @@
 use point::Point;
-use dcel::{DCEL, Vertex};
+use dcel::{DCEL, Vertex, add_line};
 use beachline::*;
 use event::*;
 use geometry::*;
 
 type TripleSite = (Point, Point, Point);
 
-pub fn voronoi(points: Vec<Point>) -> DCEL {
+pub fn voronoi(points: Vec<Point>, boxsize: f64) -> DCEL {
 	trace!("Starting Voronoi Computation");
 	let mut event_queue = EventQueue::new();
 	let mut beachline = BeachLine::new();
@@ -23,7 +23,7 @@ pub fn voronoi(points: Vec<Point>) -> DCEL {
 		trace!("Popped event from queue: {}", this_event);
 		handle_event(this_event, &mut event_queue, &mut beachline, &mut result);
 	}
-	add_bounding_box(&beachline, &mut result);
+	add_bounding_box(boxsize, &beachline, &mut result);
 	return result;
 }
 
@@ -256,8 +256,37 @@ fn handle_circle_event(
 	}
 }
 
+fn outside_bb(pt: Point, box_size: f64) -> bool {
+    pt.x() < 0. || pt.x() > box_size || pt.y() < 0. || pt.y() > box_size
+}
+
+fn add_bounding_box(boxsize: f64, beachline: &BeachLine, dcel: &mut DCEL) {
+	extend_edges(beachline, dcel);
+
+	let delta = 0.005;
+	let bb_top =    [Point::new(0. - delta, 0.), Point::new(boxsize + delta, 0.)];
+    let bb_left =   [Point::new(0., 0. - delta), Point::new(0., boxsize + delta)];
+    let bb_right =  [Point::new(boxsize, 0. - delta), Point::new(boxsize, boxsize + delta)];
+    let bb_bottom = [Point::new(0. - delta, boxsize), Point::new(boxsize + delta, boxsize)];
+
+    add_line(bb_top, dcel);
+    add_line(bb_right, dcel);
+    add_line(bb_left, dcel);
+    add_line(bb_bottom, dcel);
+
+    dcel.set_prev();
+
+    for vert in 0..dcel.vertices.len() {
+        let this_pt = dcel.vertices[vert].coordinates;
+        if outside_bb(this_pt, boxsize) {
+            dcel.remove_vertex(vert);
+        }
+    }
+
+}
+
 // This just extends the edges past the end of the bounding box
-fn add_bounding_box(beachline: &BeachLine, dcel: &mut DCEL) {
+fn extend_edges(beachline: &BeachLine, dcel: &mut DCEL) {
 	let mut current_node = beachline.tree_minimum(beachline.root);
 	trace!("\n\n");
 	loop {

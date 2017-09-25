@@ -13,12 +13,10 @@ use piston::event_loop::*;
 use piston::input::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{ GlGraphics, OpenGL };
-use voronoi_gen::{Point, voronoi, make_line_segments, make_polygons, add_faces, all_intersections, add_line};
+use voronoi_gen::{Point, voronoi, make_line_segments, make_polygons, add_faces};
 use stopwatch::{Stopwatch};
 
 pub type Segment = [Point; 2];
-
-const DELTA: f64 = 0.005;
 
 pub struct App {
     gl: GlGraphics, // OpenGL drawing backend.
@@ -27,7 +25,6 @@ pub struct App {
     faces: Vec<([f32; 4], Vec<Point>)>,
     box_shift: f64,
     segs: Vec<Segment>,
-    bb_segs: Vec<Segment>,
     int_pts: Vec<Point>,
 }
 
@@ -38,8 +35,8 @@ impl App {
 
         const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
         const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-        const RED:   [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-        const BLUE:  [f32; 4] = [0.0, 0.0, 1.0, 1.0];
+        // const RED:   [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+        // const BLUE:  [f32; 4] = [0.0, 0.0, 1.0, 1.0];
         const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 
         const DOTSIZE: f64 = 3.0;
@@ -51,7 +48,6 @@ impl App {
         let faces = self.faces.clone();
         let box_shift = self.box_shift;
         let my_segs = self.segs.clone();
-        let bb_segs = self.bb_segs.clone();
         let int_pts = self.int_pts.clone();
 
         self.gl.draw(args.viewport(), |c, gl| {
@@ -88,20 +84,12 @@ impl App {
             //     polygon(this_color, poly_pts.as_slice(), ctrans, gl);
             // }
 
-            // draw bounding box
-            for bb_seg in bb_segs {
-                line(BLUE, 1.0, [bb_seg[0].x(), bb_seg[0].y(), bb_seg[1].x(), bb_seg[1].y()], ctrans, gl);
-            }
         });
     }
 
     fn update(&mut self, args: &UpdateArgs) {
        
     }
-}
-
-fn outside_bb(pt: Point, box_size: f64) -> bool {
-    pt.x() < 0. || pt.x() > box_size || pt.y() < 0. || pt.y() > box_size
 }
 
 #[allow(unused_must_use)]
@@ -149,13 +137,6 @@ fn main() {
         my_segs.push([a_pts[i as usize], a_pts[i as usize] + b_pts[i as usize]]);
     }
 
-    // Bounding Box Segments
-    let bb_top =    [Point::new(0. - DELTA, 0.), Point::new(BOX_SIZE + DELTA, 0.)];
-    let bb_left =   [Point::new(0., 0. - DELTA), Point::new(0., BOX_SIZE + DELTA)];
-    let bb_right =  [Point::new(BOX_SIZE, 0. - DELTA), Point::new(BOX_SIZE, BOX_SIZE + DELTA)];
-    let bb_bottom = [Point::new(0. - DELTA, BOX_SIZE), Point::new(BOX_SIZE + DELTA, BOX_SIZE)];
-    let bb_segs = vec![bb_top, bb_left, bb_right, bb_bottom];
-
     // // Find intersections of random segments
     // let intersections = all_intersections(my_segs.clone());
     // let mut my_int_pts = vec![];
@@ -173,27 +154,19 @@ fn main() {
 
     debug!("Computing Voronoi Diagram of {:?}", vor_pts);
     let sw = Stopwatch::start_new();
-    let mut voronoi = voronoi(vor_pts.clone());
+    let mut voronoi = voronoi(vor_pts.clone(), BOX_SIZE);
     info!("Voronoi of {} pts took {}ms", NUM_POINTS, sw.elapsed_ms());
 
     debug!("\n\n");
     debug!("Voronoi:\n{}", voronoi);
 
-    // add bounding box
-    voronoi = add_line(bb_top, voronoi);
-    voronoi = add_line(bb_right, voronoi);
-    voronoi = add_line(bb_left, voronoi);
-    voronoi = add_line(bb_bottom, voronoi);
-
-    voronoi.set_prev();
-
     // remove parts outside box
-    for vert in 0..voronoi.vertices.len() {
-        let this_pt = voronoi.vertices[vert].coordinates;
-        if outside_bb(this_pt, BOX_SIZE) {
-            voronoi.remove_vertex(vert);
-        }
-    }
+    // for vert in 0..voronoi.vertices.len() {
+    //     let this_pt = voronoi.vertices[vert].coordinates;
+    //     if outside_bb(this_pt, BOX_SIZE) {
+    //         voronoi.remove_vertex(vert);
+    //     }
+    // }
 
     let sw_lines = Stopwatch::start_new();
     let lines = make_line_segments(&voronoi);
@@ -214,14 +187,6 @@ fn main() {
         colored_faces.push((this_color, face));
     }
 
-    // Find intersections of Voronoi diagram with bounding box
-    // let all_lines = [&bb_segs[..], &lines[..]].concat();
-    // let all_inters = all_intersections(all_lines);
-    // let mut int_pts = vec![];
-    // for inter in all_inters {
-    //     int_pts.push(inter.0);
-    // }
-
     let mut int_pts = vec![];
     for vertex in voronoi.vertices {
         if vertex.alive {
@@ -237,7 +202,7 @@ fn main() {
         faces: colored_faces,
         box_shift: ((WINDOW_SIZE as f64) - BOX_SIZE) / 2.,
         segs: my_segs,
-        bb_segs: bb_segs,
+        // bb_segs: bb_segs,
         int_pts: int_pts,
     };
 
