@@ -245,7 +245,7 @@ pub fn add_line(seg: Segment, dcel: &mut DCEL) {
 	dcel.halfedges[line_needs_prev].origin = end_vertex_ind;
 }
 
-fn makes_left_turn(pt1: Point, pt2: Point, pt3: Point) -> bool {
+pub fn makes_left_turn(pt1: Point, pt2: Point, pt3: Point) -> bool {
 	let x1 = pt1.x();
 	let x2 = pt2.x();
 	let x3 = pt3.x();

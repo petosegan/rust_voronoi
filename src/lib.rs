@@ -13,8 +13,10 @@ mod voronoi;
 mod intersect;
 mod segment_queue;
 mod sweepline;
+mod lloyd;
 
 pub use voronoi::voronoi;
 pub use point::Point;
 pub use dcel::{make_line_segments, make_polygons, add_faces, add_line};
 pub use intersect::{all_intersections};
+pub use lloyd::{lloyd_relaxation};

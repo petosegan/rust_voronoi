@@ -13,7 +13,7 @@ use piston::event_loop::*;
 use piston::input::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{ GlGraphics, OpenGL };
-use voronoi_gen::{Point, voronoi, make_line_segments, make_polygons, add_faces};
+use voronoi_gen::{Point, voronoi, make_line_segments, make_polygons, add_faces, lloyd_relaxation};
 use stopwatch::{Stopwatch};
 
 pub type Segment = [Point; 2];
@@ -24,8 +24,6 @@ pub struct App {
     lines: Vec<Segment>,
     faces: Vec<([f32; 4], Vec<Point>)>,
     box_shift: f64,
-    segs: Vec<Segment>,
-    int_pts: Vec<Point>,
 }
 
 #[allow(unused_variables)]
@@ -47,8 +45,6 @@ impl App {
         let lines = self.lines.clone();
         let faces = self.faces.clone();
         let box_shift = self.box_shift;
-        let my_segs = self.segs.clone();
-        let int_pts = self.int_pts.clone();
 
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
@@ -56,21 +52,11 @@ impl App {
 
             let ctrans = c.transform.trans(box_shift, box_shift);
 
-            // for this_seg in my_segs {
-            //     line(BLACK, 1.0, [this_seg[0].x(), this_seg[0].y(), this_seg[1].x(), this_seg[1].y()], ctrans, gl);
-            // }
-
             for pt in vor_pts {
 	            let transform = ctrans.trans(pt.x(), pt.y())
 	                                       .trans(-DOTSIZE/2., -DOTSIZE/2.);
 	            ellipse(GREEN, square, transform, gl);
 	        }
-
-            // for pt in int_pts {
-            //     let transform = ctrans.trans(pt.x(), pt.y())
-            //                                .trans(-DOTSIZE/2., -DOTSIZE/2.);
-            //     ellipse(RED, square, transform, gl);
-            // }
 
             for this_line in lines {
                 line(BLACK, 1.0, [this_line[0].x(), this_line[0].y(), this_line[1].x(), this_line[1].y()], ctrans, gl);
@@ -102,8 +88,7 @@ fn main() {
     const WINDOW_SIZE: u32 = 800;
     const BOX_SIZE: f64 = 780.0;
     const NUM_POINTS: u32 = 3000;
-    const LINE_BOX: f64 = 150.0;
-
+    const NUM_LLOYD: usize = 2;
 
     // Create an Glutin window.
     let mut window: Window = WindowSettings::new(
@@ -121,52 +106,11 @@ fn main() {
         vor_pts.push(rand::random::<Point>() * BOX_SIZE)
     }
 
-    // Generate random segments
-    let mut a_pts = vec![];
-    for _ in 0..NUM_POINTS {
-    	a_pts.push(rand::random::<Point>() * BOX_SIZE)
+    let mut lloyd = vor_pts;
+    for _ in 0..NUM_LLOYD {
+        lloyd = lloyd_relaxation(lloyd, BOX_SIZE);
     }
-
-    let mut b_pts = vec![];
-    for _ in 0..NUM_POINTS {
-        b_pts.push(rand::random::<Point>() * LINE_BOX - Point::new(LINE_BOX / 2., LINE_BOX / 2.));
-    }
-
-    let mut my_segs = vec![];
-    for i in 0..NUM_POINTS {
-        my_segs.push([a_pts[i as usize], a_pts[i as usize] + b_pts[i as usize]]);
-    }
-
-    // // Find intersections of random segments
-    // let intersections = all_intersections(my_segs.clone());
-    // let mut my_int_pts = vec![];
-    // for intersection in intersections {
-    //     my_int_pts.push(intersection.0);
-    // }
-    // println!("Found {} intersections.", my_int_pts.len());
-
-    // let my_pts = vec![Point::new(139., 68.),
-    //                     Point::new(127., 106.),
-    //                     Point::new(87., 77.),
-    //                     Point::new(71., 42.),
-    //                     Point::new(46., 114.)];
-
-
-    debug!("Computing Voronoi Diagram of {:?}", vor_pts);
-    let sw = Stopwatch::start_new();
-    let mut voronoi = voronoi(vor_pts.clone(), BOX_SIZE);
-    info!("Voronoi of {} pts took {}ms", NUM_POINTS, sw.elapsed_ms());
-
-    debug!("\n\n");
-    debug!("Voronoi:\n{}", voronoi);
-
-    // remove parts outside box
-    // for vert in 0..voronoi.vertices.len() {
-    //     let this_pt = voronoi.vertices[vert].coordinates;
-    //     if outside_bb(this_pt, BOX_SIZE) {
-    //         voronoi.remove_vertex(vert);
-    //     }
-    // }
+    let mut voronoi = voronoi(lloyd.clone(), BOX_SIZE);
 
     let sw_lines = Stopwatch::start_new();
     let lines = make_line_segments(&voronoi);
@@ -187,23 +131,13 @@ fn main() {
         colored_faces.push((this_color, face));
     }
 
-    let mut int_pts = vec![];
-    for vertex in voronoi.vertices {
-        if vertex.alive {
-            int_pts.push(vertex.coordinates);
-        }
-    }
-
     // Create a new game and run it.
     let mut app = App {
         gl: GlGraphics::new(opengl),
-        vor_pts: vor_pts,
+        vor_pts: lloyd,
         lines: lines,
         faces: colored_faces,
         box_shift: ((WINDOW_SIZE as f64) - BOX_SIZE) / 2.,
-        segs: my_segs,
-        // bb_segs: bb_segs,
-        int_pts: int_pts,
     };
 
     let mut events = Events::new(EventSettings::new());
