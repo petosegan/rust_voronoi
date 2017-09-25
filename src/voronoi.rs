@@ -257,17 +257,18 @@ fn handle_circle_event(
 }
 
 fn outside_bb(pt: Point, box_size: f64) -> bool {
-    pt.x() < 0. || pt.x() > box_size || pt.y() < 0. || pt.y() > box_size
+	let delta = 0.1;
+    pt.x() < 0. - delta || pt.x() > box_size + delta || pt.y() < 0. - delta || pt.y() > box_size + delta
 }
 
 fn add_bounding_box(boxsize: f64, beachline: &BeachLine, dcel: &mut DCEL) {
 	extend_edges(beachline, dcel);
 
-	let delta = 0.005;
-	let bb_top =    [Point::new(0. - delta, 0.), Point::new(boxsize + delta, 0.)];
-    let bb_left =   [Point::new(0., 0. - delta), Point::new(0., boxsize + delta)];
-    let bb_right =  [Point::new(boxsize, 0. - delta), Point::new(boxsize, boxsize + delta)];
-    let bb_bottom = [Point::new(0. - delta, boxsize), Point::new(boxsize + delta, boxsize)];
+	let delta = 50.;
+	let bb_top =    [Point::new(0. - delta, 0.),         Point::new(boxsize + delta, 0.)];
+    let bb_bottom = [Point::new(0. - delta, boxsize),    Point::new(boxsize + delta, boxsize)];
+    let bb_left =   [Point::new(0.,         0. - delta), Point::new(0.,              boxsize + delta)];
+    let bb_right =  [Point::new(boxsize,    0. - delta), Point::new(boxsize,         boxsize + delta)];
 
     add_line(bb_top, dcel);
     add_line(bb_right, dcel);

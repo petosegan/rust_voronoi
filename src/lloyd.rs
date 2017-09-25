@@ -27,6 +27,5 @@ pub fn lloyd_relaxation(pts: Vec<Point>, box_size: f64) -> Vec<Point> {
 	let mut voronoi = voronoi(pts, box_size);
 	add_faces(&mut voronoi);
 	let mut faces = make_polygons(&voronoi);
-	faces.retain(is_convex); // remove the outer face
 	faces.iter().map(polygon_centroid).collect::<Vec<Point>>()
 }

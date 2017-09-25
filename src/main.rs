@@ -58,17 +58,17 @@ impl App {
 	            ellipse(GREEN, square, transform, gl);
 	        }
 
+            for (this_color, this_face) in faces {
+                let mut poly_pts = vec![];
+                for pt in this_face {
+                    poly_pts.push([pt.x(), pt.y()]);
+                }
+                polygon(this_color, poly_pts.as_slice(), ctrans, gl);
+            }
+
             for this_line in lines {
                 line(BLACK, 1.0, [this_line[0].x(), this_line[0].y(), this_line[1].x(), this_line[1].y()], ctrans, gl);
             }
-
-            // for (this_color, this_face) in faces {
-            //     let mut poly_pts = vec![];
-            //     for pt in this_face {
-            //         poly_pts.push([pt.x(), pt.y()]);
-            //     }
-            //     polygon(this_color, poly_pts.as_slice(), ctrans, gl);
-            // }
 
         });
     }
@@ -86,9 +86,9 @@ fn main() {
     let opengl = OpenGL::V3_2;
 
     const WINDOW_SIZE: u32 = 800;
-    const BOX_SIZE: f64 = 780.0;
-    const NUM_POINTS: u32 = 3000;
-    const NUM_LLOYD: usize = 2;
+    const BOX_SIZE: f64 = 400.0;
+    const NUM_POINTS: u32 = 300;
+    const NUM_LLOYD: usize = 0;
 
     // Create an Glutin window.
     let mut window: Window = WindowSettings::new(
@@ -111,11 +111,12 @@ fn main() {
         lloyd = lloyd_relaxation(lloyd, BOX_SIZE);
     }
     let mut voronoi = voronoi(lloyd.clone(), BOX_SIZE);
+    debug!("Voronoi result: {}", voronoi);
 
     let sw_lines = Stopwatch::start_new();
     let lines = make_line_segments(&voronoi);
     info!("Making line segments took {}ms", sw_lines.elapsed_ms());
-    debug!("Lines:\n{:?}", lines);
+    // debug!("Lines:\n{:?}", lines);
 
     let sw_faces = Stopwatch::start_new();
     add_faces(&mut voronoi);
@@ -124,6 +125,15 @@ fn main() {
     let sw_polys = Stopwatch::start_new();
     let faces = make_polygons(&voronoi);
     info!("Making polygons took {}ms", sw_polys.elapsed_ms());
+
+    let mut faces_disp = String::new();
+    for face in &faces {
+        for pt in face {
+            faces_disp.push_str(format!("{}, ", pt).as_str());
+        }
+        faces_disp.push_str("\n");
+    }
+    debug!("Faces:\n{}", faces_disp);
 
     let mut colored_faces = vec![];
     for face in faces {
