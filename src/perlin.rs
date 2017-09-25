@@ -58,10 +58,10 @@ fn lerp(a: f64, b: f64, x: f64) -> f64 {
     a + x * (b - a)
 }
 
-fn perlin(x: f64, y: f64) -> f64 {
+pub fn perlin(x: f64, y: f64) -> f64 {
 
-    let xi = x.floor() as usize;
-    let yi = y.floor() as usize;
+    let xi = (x.floor() as usize) % 255;
+    let yi = (y.floor() as usize) % 255;
     
     let xf = x - xi as f64;
     let yf = y - yi as f64;

@@ -15,7 +15,7 @@ fn is_convex(pts: &Vec<Point>) -> bool {
 	return right_turns.iter().all(|&x| x) || !right_turns.iter().any(|&x| x);
 }
 
-fn polygon_centroid(pts: &Vec<Point>) -> Point {
+pub fn polygon_centroid(pts: &Vec<Point>) -> Point {
 	let mut pt_sum = Point::new(0.0, 0.0);
 	for pt in pts {
 		pt_sum = *pt + pt_sum;

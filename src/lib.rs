@@ -20,4 +20,5 @@ pub use voronoi::voronoi;
 pub use point::Point;
 pub use dcel::{make_line_segments, make_polygons, add_faces, add_line};
 pub use intersect::{all_intersections};
-pub use lloyd::{lloyd_relaxation};
+pub use lloyd::{lloyd_relaxation, polygon_centroid};
+pub use perlin::perlin;

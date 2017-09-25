@@ -13,7 +13,7 @@ use piston::event_loop::*;
 use piston::input::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{ GlGraphics, OpenGL };
-use voronoi_gen::{Point, voronoi, make_line_segments, make_polygons, add_faces, lloyd_relaxation};
+use voronoi_gen::{Point, voronoi, make_line_segments, make_polygons, add_faces, lloyd_relaxation, perlin, polygon_centroid};
 use stopwatch::{Stopwatch};
 
 pub type Segment = [Point; 2];
@@ -139,9 +139,21 @@ fn main() {
     }
     debug!("Faces:\n{}", faces_disp);
 
+    const SCALE: f64 = 4.0;
+    const DIST_EXPONENT: f64 = 2.0;
+    const ELEV_OFFSET: f64 = 0.5;
+    const DIST_MULTIPLIER: f64 = 2.0;
+    const BLUE:  [f32; 4] = [0.0, 0.0, 1.0, 1.0];
+    const GREEN:  [f32; 4] = [0.0, 1.0, 0.0, 1.0];
     let mut colored_faces = vec![];
     for face in faces {
-        let this_color = [rand::random::<f32>(), rand::random::<f32>(), rand::random::<f32>(), 1.0];
+        let centroid = polygon_centroid(&face);
+        let center_dist = ((centroid.x() - BOX_SIZE/2.) * (centroid.x() - BOX_SIZE/2.) + (centroid.y() - BOX_SIZE/2.) * (centroid.y() - BOX_SIZE/2.)).sqrt();
+        let center_dist_normed = center_dist / BOX_SIZE  * 1.41;
+        let perlin_val = perlin(SCALE * centroid.x() / BOX_SIZE, SCALE * centroid.y() / BOX_SIZE);
+        let elevation = (perlin_val + ELEV_OFFSET - DIST_MULTIPLIER * center_dist_normed.powf(DIST_EXPONENT)) as f32;
+        let mut this_color = GREEN;
+        if elevation <= 0.0 { this_color = BLUE; }
         colored_faces.push((this_color, face));
     }
 
