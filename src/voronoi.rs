@@ -215,7 +215,7 @@ fn handle_circle_event(
 
 	// make a vertex at the circle center
 	let circle_center = circle_center(triplesite);
-	let center_vertex = Vertex { coordinates: circle_center, incident_edge: twin1};
+	let center_vertex = Vertex { coordinates: circle_center, incident_edge: twin1, alive: true};
 	let center_vertex_ind = dcel.vertices.len();
 	dcel.vertices.push(center_vertex);
 
@@ -269,7 +269,7 @@ fn add_bounding_box(beachline: &BeachLine, dcel: &mut DCEL) {
 				let this_x = get_breakpoint_x(&breakpoint, -1000.0);
 				let this_y = get_breakpoint_y(&breakpoint, -1000.0);
 
-				let vert = Vertex {coordinates: Point::new(this_x, this_y), incident_edge: this_edge};
+				let vert = Vertex {coordinates: Point::new(this_x, this_y), incident_edge: this_edge, alive: true};
 				let vert_ind = dcel.vertices.len();
 
 				dcel.halfedges[this_edge].origin = vert_ind;

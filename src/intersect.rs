@@ -137,7 +137,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
     fn simple_segments_intersect() {
     	let line1 = [Point::new(-1.0, 0.0), Point::new(1.0, 0.0)];
         let line2 = [Point::new(0.0, -1.0), Point::new(0.0, 1.0)];
@@ -145,7 +144,13 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    fn tee_segments_intersect() {
+        let line1 = [Point::new(-1.0, 0.0), Point::new(1.0, 0.0)];
+        let line2 = [Point::new(0.0, 0.0), Point::new(0.0, 1.0)];
+        assert_eq!(segment_intersection(line1, line2), Some(Point::new(0.0, 0.0)));
+    }
+
+    #[test]
     fn simple_segments_nonintersect() {
         let line1 = [Point::new(-1.0, 10.0), Point::new(1.0, 10.0)];
         let line2 = [Point::new(0.0, -1.0), Point::new(0.0, 1.0)];
@@ -153,7 +158,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn simplest_lines_intersect() {
         // let _ = env_logger::init();
 
@@ -181,7 +185,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn tee_lines_intersect() {
         // let _ = env_logger::init();
 
@@ -209,7 +212,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn doublecross_intersect() {
         // let _ = env_logger::init();
 
@@ -239,9 +241,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn h_intersect() {
-        let _ = env_logger::init();
+        // let _ = env_logger::init();
 
         debug!("Test on H");
         let line1 = [Point::new(1.0, 2.0), Point::new(1.0, 0.0)];
@@ -270,7 +271,7 @@ mod tests {
 
     #[test]
     fn slanted_h_intersect() {
-        let _ = env_logger::init();
+        // let _ = env_logger::init();
 
         debug!("Test on Slanted H");
         let line1 = [Point::new(2.0, 3.0), Point::new(2.0, 1.0)];
@@ -298,7 +299,35 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    fn nondegenerate_slanted_h_intersect() {
+        // let _ = env_logger::init();
+
+        debug!("Test on Nondegenerate Slanted H");
+        let line1 = [Point::new(2.0, 3.1), Point::new(2.0, 1.1)];
+        let line2 = [Point::new(3.0, 3.0), Point::new(0.0, 0.0)];
+        let line3 = [Point::new(1.0, 2.1), Point::new(1.0, 0.1)];
+
+        let intersections = all_intersections(vec![line1, line2, line3]);
+        let mut int_pts = vec![];
+        for intersection in intersections {
+            int_pts.push(intersection.0)
+        }
+
+        let mut int_disp = String::new();
+
+        for pt in &int_pts {
+            int_disp.push_str(format!("{}, ", pt).as_str());
+            int_disp.push_str("\n");
+        }
+
+        println!("Intersections: {}", int_disp);
+
+        assert!(int_pts.contains(&Point::new(1.0, 1.0)));
+        assert!(int_pts.contains(&Point::new(2.0, 2.0)));
+        assert!(int_pts.len() == 2);
+    }
+
+    #[test]
     fn multiple_lines_intersect() {
         // let _ = env_logger::init();
 
@@ -331,7 +360,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn crossed_lines_intersect() {
         let line1 = [Point::new(0.0, 0.0), Point::new(4.0, 4.0)];
         let line2 = [Point::new(2.0, 0.0), Point::new(0.0, 2.0)];

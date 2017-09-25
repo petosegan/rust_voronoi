@@ -1,6 +1,7 @@
 use std::fmt;
 use point::Point;
 use std::collections::HashSet;
+use intersect::{Segment, segment_intersection};
 
 const NIL: usize = !0;
 
@@ -28,6 +29,59 @@ impl DCEL {
 		self.halfedges.push(he2);
 		(start_index, start_index + 1)
 	}
+	pub fn get_origin(&self, edge: usize) -> Point {
+		let origin_ind = self.halfedges[edge].origin;
+		return self.vertices[origin_ind].coordinates;
+	}
+	pub fn set_prev(&mut self) {
+		let mut seen_edges = HashSet::new();
+		for edge_ind in 0..self.halfedges.len() {
+			if seen_edges.contains(&edge_ind) { continue; }
+			let mut current_ind = edge_ind;
+			seen_edges.insert(current_ind);
+			loop {
+				let next_edge = self.halfedges[current_ind].next;
+				self.halfedges[next_edge].prev = current_ind;
+				current_ind = next_edge;
+				seen_edges.insert(current_ind);
+				if current_ind == edge_ind { break; }
+			}
+		}
+	}
+	fn remove_edge(&mut self, edge: usize) {
+		let edge_prev = self.halfedges[edge].prev;
+		let edge_next = self.halfedges[edge].next;
+		let twin = self.halfedges[edge].twin;
+		let twin_prev = self.halfedges[twin].prev;
+		let twin_next = self.halfedges[twin].next;
+
+		self.halfedges[edge_prev].next = twin_next;
+		self.halfedges[edge_next].prev = twin_prev;
+		self.halfedges[twin_prev].next = edge_next;
+		self.halfedges[twin_next].prev = edge_prev;
+
+		self.halfedges[edge].alive = false;
+		self.halfedges[twin].alive = false;
+	}
+	fn get_edges_around_vertex(&self, vertex: usize) -> Vec<usize> {
+		let mut result = vec![];
+		let start_edge = self.vertices[vertex].incident_edge;
+		let mut current_edge = start_edge;
+		loop {
+			result.push(current_edge);
+			let current_twin = self.halfedges[current_edge].twin;
+			current_edge = self.halfedges[current_twin].next;
+			if current_edge == start_edge { break; }
+		}
+		return result;
+	}
+	pub fn remove_vertex(&mut self, vertex: usize) {
+		let vertex_edges = self.get_edges_around_vertex(vertex);
+		for edge in vertex_edges {
+			self.remove_edge(edge);
+		}
+		self.vertices[vertex].alive = false;
+	}
 }
 
 impl fmt::Display for DCEL {
@@ -35,19 +89,25 @@ impl fmt::Display for DCEL {
     	let mut vertices_disp = String::new();
 
         for (index, node) in self.vertices.iter().enumerate() {
-            vertices_disp.push_str(format!("{}: {}\n", index, node).as_str());
+        	if node.alive {
+            	vertices_disp.push_str(format!("{}: {}\n", index, node).as_str());
+            }
         }
 
         let mut faces_disp = String::new();
 
         for (index, node) in self.faces.iter().enumerate() {
-        	faces_disp.push_str(format!("{}: {}\n", index, node).as_str());
+        	if node.alive {
+        		faces_disp.push_str(format!("{}: {}\n", index, node).as_str());
+        	}
         }
 
         let mut halfedges_disp = String::new();
 
         for (index, node) in self.halfedges.iter().enumerate() {
-            halfedges_disp.push_str(format!("{}: {}\n", index, node).as_str());
+        	if node.alive {
+            	halfedges_disp.push_str(format!("{}: {}\n", index, node).as_str());
+            }
         }
 
         write!(f, "Vertices:\n{}\nFaces:\n{}\nHalfedges:\n{}", vertices_disp, faces_disp, halfedges_disp)
@@ -58,6 +118,7 @@ impl fmt::Display for DCEL {
 pub struct Vertex {
 	pub coordinates: Point,
 	pub incident_edge: usize, // index of halfedge
+	pub alive: bool,
 }
 
 impl fmt::Display for Vertex {
@@ -72,6 +133,8 @@ pub struct HalfEdge {
 	pub twin: usize, // index of halfedge
 	pub next: usize, // index of halfedge
 	face: usize, // index of face
+	prev: usize, // index of halfedge
+	alive: bool,
 }
 
 impl fmt::Display for HalfEdge {
@@ -82,13 +145,14 @@ impl fmt::Display for HalfEdge {
 
 impl HalfEdge {
 	pub fn new() -> Self {
-		HalfEdge {origin: NIL, twin: NIL, next: NIL, face: NIL}
+		HalfEdge {origin: NIL, twin: NIL, next: NIL, face: NIL, prev: NIL, alive: true}
 	}
 }
 
 #[derive(Debug)]
 pub struct Face {
-	outer_component: usize // index of halfedge
+	outer_component: usize, // index of halfedge
+	alive: bool,
 }
 
 impl fmt::Display for Face {
@@ -99,7 +163,7 @@ impl fmt::Display for Face {
 
 impl Face {
 	pub fn new(edge: usize) -> Self {
-		Face {outer_component: edge}
+		Face {outer_component: edge, alive: true}
 	}
 }
 
@@ -112,7 +176,7 @@ pub fn add_faces(dcel: &mut DCEL) {
 	info!("Adding faces. There are {} halfedges.", num_halfedges);
 
 	for edge_index in 0..num_halfedges {
-		if seen_edges.contains(&edge_index) { continue; }
+		if seen_edges.contains(&edge_index) || !dcel.halfedges[edge_index].alive { continue; }
 		processed_edges += 1;
 
 		let face_index = dcel.faces.len();
@@ -223,10 +287,10 @@ fn get_line_intersections(seg: Segment, dcel: &DCEL) -> Vec<(Point, usize)> {
 pub fn make_line_segments(dcel: &DCEL) -> Vec<Segment> {
 	let mut result = vec![];
 	for halfedge in &dcel.halfedges {
-		if halfedge.origin != NIL && halfedge.next != NIL {
+		if halfedge.origin != NIL && halfedge.next != NIL && halfedge.alive {
 			if dcel.halfedges[halfedge.next].origin != NIL {
-				result.push((dcel.vertices[halfedge.origin].coordinates,
-					dcel.vertices[dcel.halfedges[halfedge.next].origin].coordinates))
+				result.push([dcel.vertices[halfedge.origin].coordinates,
+					dcel.get_origin(halfedge.next)])
 			}
 		}
 	}
@@ -236,12 +300,12 @@ pub fn make_line_segments(dcel: &DCEL) -> Vec<Segment> {
 pub fn make_polygons(dcel: &DCEL) -> Vec<Vec<Point>> {
 	let mut result = vec![];
 	for face in &dcel.faces {
+		if !face.alive { continue; }
 		let mut this_poly = vec![];
 		let start_edge = face.outer_component;
 		let mut current_edge = start_edge;
 		loop {
-			let this_origin = dcel.halfedges[current_edge].origin;
-			this_poly.push(dcel.vertices[this_origin].coordinates);
+			this_poly.push(dcel.get_origin(current_edge));
 			current_edge = dcel.halfedges[current_edge].next;
 			if current_edge == start_edge { break; }
 		}

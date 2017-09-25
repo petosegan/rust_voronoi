@@ -68,7 +68,7 @@ impl EventQueue {
 	}
 	pub fn push(&mut self, event: VoronoiEvent, beachline: &mut BeachLine) {
 		let new_node_ind = self.events.len();
-		debug!("pushing event {}", new_node_ind);
+		info!("pushing event {}", new_node_ind);
 		self.events.push(event);
 		self.bubble_up(new_node_ind, beachline);
 	}
@@ -76,7 +76,7 @@ impl EventQueue {
 	// assumes that the only violation of the heap property
 	// is that the bubble might be larger than nodes above it
 	fn bubble_up(&mut self, bubble_node: usize, beachline: &mut BeachLine) {
-		debug!("bubbling up node {}", bubble_node);
+		info!("bubbling up node {}", bubble_node);
 		let mut current_parent = parent(bubble_node);
 		let mut current_bubble = bubble_node;
 		let bubble_key = self.events[bubble_node].get_y();
@@ -109,7 +109,7 @@ impl EventQueue {
 		}
 	}
 	fn swap(&mut self, node_a: usize, node_b: usize, beachline: &mut BeachLine) {
-		debug!("swapping {} and {}", node_a, node_b);
+		info!("swapping {} and {}", node_a, node_b);
 		let mut leaf_a = NIL;
 		let mut leaf_b = NIL;
 		if let VoronoiEvent::Circle(l_a, _) = self.events[node_a] {
@@ -125,7 +125,7 @@ impl EventQueue {
 
 		if leaf_a != NIL {
 			if let BeachItem::Leaf(ref mut arc_a) = beachline.nodes[leaf_a].item {
-				debug!("swap a: switched arc {} to point to {}", leaf_a, node_b);
+				info!("swap a: switched arc {} to point to {}", leaf_a, node_b);
 				arc_a.site_event = Some(node_b);
 			} else {
 				panic!("circle event pointed to non-arc!");
@@ -133,7 +133,7 @@ impl EventQueue {
 		}
 		if leaf_b != NIL {
 			if let BeachItem::Leaf(ref mut arc_b) = beachline.nodes[leaf_b].item {
-				debug!("swap b: switched arc {} to point to {}", leaf_b, node_a);
+				info!("swap b: switched arc {} to point to {}", leaf_b, node_a);
 				arc_b.site_event = Some(node_a);
 			} else {
 				panic!("circle event pointed to non-arc!");
@@ -155,7 +155,7 @@ impl EventQueue {
 		}
 		if this_leaf != NIL {
 			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[this_leaf].item {
-				debug!("popped circle event, so pointed arc {} to None", this_leaf);
+				info!("popped circle event, so pointed arc {} to None", this_leaf);
 				arc.site_event = None;
 			} else {
 				panic!("circle event pointed to non-arc!");
@@ -170,7 +170,7 @@ impl EventQueue {
 	}
 	pub fn remove(&mut self, removed: usize, beachline: &mut BeachLine) {
 		let heapsize = self.events.len()-1;
-		debug!("removing node {}, heapsize is {}", removed, heapsize);
+		info!("removing node {}, heapsize is {}", removed, heapsize);
 		self.swap(removed, heapsize, beachline);
 		let removed_event = self.events.pop();
 
@@ -180,7 +180,7 @@ impl EventQueue {
 		}
 		if this_leaf != NIL {
 			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[this_leaf].item {
-				debug!("removed circle event, so pointed arc {} to None", this_leaf);
+				info!("removed circle event, so pointed arc {} to None", this_leaf);
 				arc.site_event = None;
 			} else {
 				panic!("circle event pointed to non-arc!");
