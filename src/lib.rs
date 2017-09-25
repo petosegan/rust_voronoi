@@ -16,5 +16,5 @@ mod sweepline;
 
 pub use voronoi::voronoi;
 pub use point::Point;
-pub use dcel::{make_line_segments, make_polygons, add_faces};
+pub use dcel::{make_line_segments, make_polygons, add_faces, add_line};
 pub use intersect::{all_intersections};

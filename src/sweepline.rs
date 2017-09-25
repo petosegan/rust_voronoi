@@ -47,18 +47,11 @@ fn seg_contains_pt(seg: Segment, pt: Point) -> bool {
 
 fn get_segment_x(seg: Segment, y_line: f64) -> OrderedFloat<f64> {
     // trace!("getting segment_x for {} to {} at y_line = {}", seg[0], seg[1], y_line);
-    // handle horizontal segments
-    if seg[0].y() == seg[1].y() {
-        if seg[0].y() == y_line { 
-            if seg[0] > seg[1] { 
-                // trace!("Horizontal! segment_x was {}", seg[1].x);
-                return seg[1].x; 
-            } else { 
-                // trace!("Horizontal! segment_x was {}", seg[0].x);
-                return seg[0].x; 
-            }
-        }
-    }
+
+    // handle segments that end at the y_line
+    let lp = get_lower_point(seg);
+    if lp.y() == y_line { return lp.x; }
+
     let mut x0 = seg[0].x();
     let mut x1 = seg[1].x();
     if x0 == x1 {
@@ -446,7 +439,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
     fn horizontal_segment_order() {
         // let _ = env_logger::init();
         trace!("\n\n");
@@ -463,7 +455,6 @@ mod tests {
         assert!(sweepline.nodes[right_ind].segment == line1);
     }
     #[test]
-    #[ignore]
     fn slanted_segment_order_1() {
         // let _ = env_logger::init();
         trace!("\n\n");
@@ -480,7 +471,6 @@ mod tests {
         assert!(sweepline.nodes[right_ind].segment == line1);
     }
     #[test]
-    #[ignore]
     fn slanted_segment_order_2() {
         // let _ = env_logger::init();
         trace!("\n\n");
@@ -497,7 +487,6 @@ mod tests {
         assert!(sweepline.nodes[right_ind].segment == line2);
     }
     #[test]
-    #[ignore]
     fn slanted_segment_order_3() {
         // let _ = env_logger::init();
         trace!("\n\n");
@@ -512,5 +501,14 @@ mod tests {
         trace!("Sweepline: {}", sweepline);
         let right_ind = sweepline.nodes[sweepline.root.unwrap()].right_child.unwrap();
         assert!(sweepline.nodes[right_ind].segment == line2);
+    }
+
+    #[test]
+    fn vertical_get_x() {
+        trace!("\n\n");
+
+        let seg = [Point::new(0.0, 0.0), Point::new(0.0, 1.0)];
+
+        assert!(get_segment_x(seg, 0.).into_inner() == 0.0);
     }
 }

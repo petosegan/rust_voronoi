@@ -130,7 +130,97 @@ pub fn add_faces(dcel: &mut DCEL) {
 	info!("Generated faces for {} edges.", processed_edges);
 }
 
-pub fn make_line_segments(dcel: &DCEL) -> Vec<(Point, Point)> {
+// does not handle the case where line goes through dcel vertex
+pub fn add_line(seg: Segment, mut dcel: DCEL) -> DCEL {
+	let mut intersections = get_line_intersections(seg, &dcel);
+	intersections.sort_by(|a, b| a.0.cmp(&b.0));
+	let start_pt = if seg[0] < seg[1] { seg[0] } else { seg[1] };
+	let end_pt   = if seg[0] < seg[1] { seg[1] } else { seg[0] };
+
+	let (mut line_needs_next, mut line_needs_prev, _) = add_twins_from_pt(start_pt, &mut dcel);
+	dcel.halfedges[line_needs_prev].next = line_needs_next;
+	let prev_pt = start_pt;
+
+	for (int_pt, this_cut_edge) in intersections {
+		let (new_line_needs_next, new_line_needs_prev, new_pt_ind) = add_twins_from_pt(int_pt, &mut dcel);
+		dcel.halfedges[line_needs_prev].origin = new_pt_ind;
+
+		let mut cut_edge = this_cut_edge;
+		if makes_left_turn(prev_pt, int_pt, dcel.get_origin(this_cut_edge)) {
+			cut_edge = dcel.halfedges[cut_edge].twin;
+		}
+
+		let old_cut_next = dcel.halfedges[cut_edge].next;
+		let old_cut_twin = dcel.halfedges[cut_edge].twin;
+		dcel.halfedges[cut_edge].next = line_needs_prev;
+		
+		let cut_ext_ind = dcel.halfedges.len();
+		let cut_ext_he = HalfEdge { origin: new_pt_ind, next: old_cut_next, twin: old_cut_twin, face: NIL, prev: NIL, alive: true };
+		dcel.halfedges.push(cut_ext_he);
+		dcel.halfedges[line_needs_next].next = cut_ext_ind;
+
+		let old_twin_next = dcel.halfedges[old_cut_twin].next;
+		dcel.halfedges[old_cut_twin].next = new_line_needs_next;
+
+		let twin_ext_ind = dcel.halfedges.len();
+		let twin_ext_he = HalfEdge { origin: new_pt_ind, next: old_twin_next, twin: cut_edge, face: NIL, prev: NIL, alive: true };
+		dcel.halfedges.push(twin_ext_he);
+		dcel.halfedges[new_line_needs_prev].next = twin_ext_ind;
+
+		dcel.halfedges[cut_edge].twin = twin_ext_ind;
+		dcel.halfedges[old_cut_twin].twin = cut_ext_ind;
+
+		line_needs_next = new_line_needs_next;
+		line_needs_prev = new_line_needs_prev;
+	}
+
+	dcel.halfedges[line_needs_next].next = line_needs_prev;
+	let end_vertex_ind = dcel.vertices.len();
+	let end_vertex = Vertex { coordinates: end_pt, incident_edge: line_needs_prev, alive: true };
+	dcel.vertices.push(end_vertex);
+	dcel.halfedges[line_needs_prev].origin = end_vertex_ind;
+	return dcel;
+}
+
+fn makes_left_turn(pt1: Point, pt2: Point, pt3: Point) -> bool {
+	let x1 = pt1.x();
+	let x2 = pt2.x();
+	let x3 = pt3.x();
+	let y1 = pt1.y();
+	let y2 = pt2.y();
+	let y3 = pt3.y();
+
+	(x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1) > 0.
+}
+
+fn add_twins_from_pt(start_pt: Point, dcel: &mut DCEL) -> (usize, usize, usize) {
+	let (twin1, twin2) = dcel.add_twins();
+
+	let start_vertex = Vertex { coordinates: start_pt, incident_edge: twin1, alive: true };
+	let start_vertex_ind = dcel.vertices.len();
+	dcel.vertices.push(start_vertex);
+
+	dcel.halfedges[twin1].origin = start_vertex_ind;
+
+	(twin1, twin2, start_vertex_ind)
+}
+
+fn get_line_intersections(seg: Segment, dcel: &DCEL) -> Vec<(Point, usize)> {
+	let mut intersections = vec![];
+	let mut seen_halfedges = HashSet::new();
+	for (index, halfedge) in dcel.halfedges.iter().enumerate() {
+		let twin = halfedge.twin;
+		if seen_halfedges.contains(&index) || seen_halfedges.contains(&twin) || !halfedge.alive { continue; }
+		let this_seg = [dcel.get_origin(index), dcel.get_origin(twin)];
+		let this_intersection = segment_intersection(seg, this_seg);
+		if let Some(int_pt) = this_intersection { intersections.push((int_pt, index)); }
+		seen_halfedges.insert(index);
+		seen_halfedges.insert(twin);
+	}
+	return intersections;
+}
+
+pub fn make_line_segments(dcel: &DCEL) -> Vec<Segment> {
 	let mut result = vec![];
 	for halfedge in &dcel.halfedges {
 		if halfedge.origin != NIL && halfedge.next != NIL {
