@@ -86,9 +86,9 @@ fn main() {
     let opengl = OpenGL::V3_2;
 
     const WINDOW_SIZE: u32 = 800;
-    const BOX_SIZE: f64 = 400.0;
-    const NUM_POINTS: u32 = 300;
-    const NUM_LLOYD: usize = 0;
+    const BOX_SIZE: f64 = 780.0;
+    const NUM_POINTS: u32 = 3000;
+    const NUM_LLOYD: usize = 2;
 
     // Create an Glutin window.
     let mut window: Window = WindowSettings::new(
@@ -123,8 +123,12 @@ fn main() {
     info!("Making faces took {}ms", sw_faces.elapsed_ms());
 
     let sw_polys = Stopwatch::start_new();
-    let faces = make_polygons(&voronoi);
+    let mut faces = make_polygons(&voronoi);
     info!("Making polygons took {}ms", sw_polys.elapsed_ms());
+
+    // remove the outer face
+    faces.sort_by(|a, b| a.len().cmp(&b.len()));
+    while faces.len() > lloyd.len() { faces.pop(); }
 
     let mut faces_disp = String::new();
     for face in &faces {
