@@ -6,6 +6,8 @@ use geometry::*;
 
 type TripleSite = (Point, Point, Point);
 
+/// Computes the Voronoi diagram of a set of points.
+/// Returns a Doubly Connected Edge List.
 pub fn voronoi(points: Vec<Point>, boxsize: f64) -> DCEL {
 	trace!("Starting Voronoi Computation");
 	let mut event_queue = EventQueue::new();

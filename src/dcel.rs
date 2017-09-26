@@ -283,6 +283,7 @@ fn get_line_intersections(seg: Segment, dcel: &DCEL) -> Vec<(Point, usize)> {
 	return intersections;
 }
 
+/// Constructs the line segments of the Voronoi diagram.
 pub fn make_line_segments(dcel: &DCEL) -> Vec<Segment> {
 	let mut result = vec![];
 	for halfedge in &dcel.halfedges {
@@ -296,6 +297,7 @@ pub fn make_line_segments(dcel: &DCEL) -> Vec<Segment> {
 	result
 }
 
+/// Constructs the faces of the Voronoi diagram.
 pub fn make_polygons(dcel: &DCEL) -> Vec<Vec<Point>> {
 	let mut result = vec![];
 	for face in &dcel.faces {
