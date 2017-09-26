@@ -144,7 +144,6 @@ fn main() {
     const ELEV_OFFSET: f64 = 0.5;
     const DIST_MULTIPLIER: f64 = 2.0;
     const BLUE:  [f32; 4] = [0.0, 0.0, 1.0, 1.0];
-    const GREEN:  [f32; 4] = [0.0, 1.0, 0.0, 1.0];
     let mut colored_faces = vec![];
     for face in faces {
         let centroid = polygon_centroid(&face);
@@ -152,7 +151,7 @@ fn main() {
         let center_dist_normed = center_dist / BOX_SIZE  * 1.41;
         let perlin_val = perlin(SCALE * centroid.x() / BOX_SIZE, SCALE * centroid.y() / BOX_SIZE);
         let elevation = (perlin_val + ELEV_OFFSET - DIST_MULTIPLIER * center_dist_normed.powf(DIST_EXPONENT)) as f32;
-        let mut this_color = GREEN;
+        let mut this_color = [elevation, 1.0, elevation, 1.0];
         if elevation <= 0.0 { this_color = BLUE; }
         colored_faces.push((this_color, face));
     }
