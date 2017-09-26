@@ -1,7 +1,7 @@
 use std::fmt;
 use point::Point;
 use std::collections::HashSet;
-use intersect::{Segment, segment_intersection};
+use geometry::{Segment, segment_intersection};
 
 const NIL: usize = !0;
 

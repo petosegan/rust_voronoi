@@ -1,5 +1,3 @@
 /target/
 **/*.rs.bk
-parabolas.ipynb
-.ipynb_checkpoints/parabolas-checkpoint.ipynb
 *.ipynb

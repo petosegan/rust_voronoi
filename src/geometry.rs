@@ -4,6 +4,28 @@ use beachline::BreakPoint;
 
 type TripleSite = (Point, Point, Point);
 
+pub type Segment = [Point; 2];
+
+pub fn segment_intersection(seg1: Segment, seg2: Segment) -> Option<Point> {
+    let a = seg1[0];
+    let c = seg2[0];
+    let r = seg1[1] - a;
+    let s = seg2[1] - c;
+
+    let denom = r.cross(s);
+    if denom == 0.0 { return None; }
+
+    let numer_a = (c - a).cross(s);
+    let numer_c = (c - a).cross(r);
+
+    let t = numer_a / denom;
+    let u = numer_c / denom;
+
+    if t < 0.0 || t > 1.0 || u < 0.0 || u > 1.0 { return None; }
+
+    return Some(a + r * t);
+}
+
 pub fn circle_bottom(triple_site: TripleSite) -> OrderedFloat<f64> {
 	let circle_center = circle_center(triple_site);
 	let (_, _, p3) = triple_site;
