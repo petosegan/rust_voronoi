@@ -1,6 +1,6 @@
 use point::Point;
 use voronoi::voronoi;
-use dcel::{add_faces, make_polygons};
+use dcel::{make_polygons};
 
 pub fn polygon_centroid(pts: &Vec<Point>) -> Point {
 	let mut pt_sum = Point::new(0.0, 0.0);
@@ -11,8 +11,7 @@ pub fn polygon_centroid(pts: &Vec<Point>) -> Point {
 }
 
 pub fn lloyd_relaxation(pts: Vec<Point>, box_size: f64) -> Vec<Point> {
-	let mut voronoi = voronoi(pts, box_size);
-	add_faces(&mut voronoi);
+	let voronoi = voronoi(pts, box_size);
 	let faces = make_polygons(&voronoi);
 	faces.iter().map(polygon_centroid).collect::<Vec<Point>>()
 }

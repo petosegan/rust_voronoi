@@ -1,5 +1,5 @@
 use point::Point;
-use dcel::{DCEL, Vertex, add_line};
+use dcel::{DCEL, Vertex, add_line, add_faces};
 use beachline::*;
 use event::*;
 use geometry::*;
@@ -24,6 +24,7 @@ pub fn voronoi(points: Vec<Point>, boxsize: f64) -> DCEL {
 		handle_event(this_event, &mut event_queue, &mut beachline, &mut result);
 	}
 	add_bounding_box(boxsize, &beachline, &mut result);
+	add_faces(&mut result);
 	return result;
 }
 

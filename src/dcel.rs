@@ -310,5 +310,10 @@ pub fn make_polygons(dcel: &DCEL) -> Vec<Vec<Point>> {
 		}
 		result.push(this_poly);
 	}
+
+	// remove the outer face
+    result.sort_by(|a, b| a.len().cmp(&b.len()));
+    result.pop(); 
+
 	return result;
 }

@@ -15,4 +15,4 @@ mod lloyd;
 pub use voronoi::voronoi;
 pub use point::Point;
 pub use dcel::{make_line_segments, make_polygons};
-pub use lloyd::{lloyd_relaxation};
+pub use lloyd::{lloyd_relaxation, polygon_centroid};

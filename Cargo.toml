@@ -1,6 +1,6 @@
 [package]
 
-name = "voronoi-gen"
+name = "voronoi"
 version = "0.1.0"
 authors = [
     "Will Turner <rwturner17@gmail.com>"
