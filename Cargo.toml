@@ -1,7 +1,8 @@
 [package]
 
 name = "voronoi"
-version = "0.1.1"
+version = "0.1.2"
+documentation = "https://docs.rs/voronoi/0.1.2/voronoi/"
 authors = [ "Will Turner <rwturner17@gmail.com>" ]
 description = "A library to compute Voronoi diagrams, using Fortune's sweepline algorithm"
 repository = "https://github.com/petosegan/rust_voronoi"

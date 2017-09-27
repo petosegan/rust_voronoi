@@ -5,19 +5,25 @@ use geometry::{Segment, segment_intersection};
 
 const NIL: usize = !0;
 
+/// Doubly Connected Edge List representation of a subdivision of the plane.
 #[derive(Debug)]
 pub struct DCEL {
+	/// Vertices
 	pub vertices: Vec<Vertex>,
+	/// Halfedges
 	pub halfedges: Vec<HalfEdge>,
-	faces: Vec<Face>,
+	/// Faces
+	pub faces: Vec<Face>,
 }
 
 impl DCEL {
+	/// Construct an empty DCEL
 	pub fn new() -> Self {
 		DCEL {vertices: vec![],
 			halfedges: vec![],
 			faces: vec![]}
 	}
+	/// Add two halfedges that are twins
 	pub fn add_twins(&mut self) -> (usize, usize) {
 		let mut he1 = HalfEdge::new();
 		let mut he2 = HalfEdge::new();
@@ -29,10 +35,13 @@ impl DCEL {
 		self.halfedges.push(he2);
 		(start_index, start_index + 1)
 	}
+	/// Get the origin of a halfedge by index
 	pub fn get_origin(&self, edge: usize) -> Point {
 		let origin_ind = self.halfedges[edge].origin;
 		return self.vertices[origin_ind].coordinates;
 	}
+	/// Set the previous edge of all halfedges
+	/// Assumes that the DCEL is well-formed.
 	pub fn set_prev(&mut self) {
 		let mut seen_edges = HashSet::new();
 		for edge_ind in 0..self.halfedges.len() {
@@ -75,6 +84,8 @@ impl DCEL {
 		}
 		return result;
 	}
+	/// Remove a vertex and all attached halfedges.
+	/// Does not affect faces!!
 	pub fn remove_vertex(&mut self, vertex: usize) {
 		let vertex_edges = self.get_edges_around_vertex(vertex);
 		for edge in vertex_edges {
@@ -115,9 +126,13 @@ impl fmt::Display for DCEL {
 }
 
 #[derive(Debug)]
+/// A vertex of a DCEL
 pub struct Vertex {
+	/// (x, y) coordinates
 	pub coordinates: Point,
+	/// Some halfedge having this vertex as the origin
 	pub incident_edge: usize, // index of halfedge
+	/// False if the vertex has been deleted
 	pub alive: bool,
 }
 
@@ -128,9 +143,13 @@ impl fmt::Display for Vertex {
 }
 
 #[derive(Debug)]
+/// A halfedge of a DCEL
 pub struct HalfEdge {
+	/// The index of the vertex at the start of the halfedge
 	pub origin: usize, // index of vertex
+	/// The index of the twin halfedge
 	pub twin: usize, // index of halfedge
+	/// The index of the next halfedge
 	pub next: usize, // index of halfedge
 	face: usize, // index of face
 	prev: usize, // index of halfedge
@@ -144,12 +163,14 @@ impl fmt::Display for HalfEdge {
 }
 
 impl HalfEdge {
+	/// Construct an empty halfedge
 	pub fn new() -> Self {
 		HalfEdge {origin: NIL, twin: NIL, next: NIL, face: NIL, prev: NIL, alive: true}
 	}
 }
 
 #[derive(Debug)]
+/// A face of a DCEL
 pub struct Face {
 	outer_component: usize, // index of halfedge
 	alive: bool,
@@ -162,11 +183,17 @@ impl fmt::Display for Face {
 }
 
 impl Face {
+	/// Construct a new face, given an attached halfedge index
 	pub fn new(edge: usize) -> Self {
 		Face {outer_component: edge, alive: true}
 	}
 }
 
+/// Construct faces for a DCEL.
+///
+/// # Panics
+///
+/// This method will panic if the DCEL has any faces already.
 pub fn add_faces(dcel: &mut DCEL) {
 	if !dcel.faces.is_empty() { panic!("add_faces only works on DCELs with no faces");}
 	let mut seen_edges = HashSet::new();
@@ -195,6 +222,10 @@ pub fn add_faces(dcel: &mut DCEL) {
 }
 
 // does not handle the case where line goes through dcel vertex
+/// Add a line segment to a DCEL.
+///
+/// Vertices and halfedges are constructed and mutated as necessary.
+/// Faces are not affected. This should be used before add_faces.
 pub fn add_line(seg: Segment, dcel: &mut DCEL) {
 	let mut intersections = get_line_intersections(seg, dcel);
 	intersections.sort_by(|a, b| a.0.cmp(&b.0));
@@ -245,6 +276,7 @@ pub fn add_line(seg: Segment, dcel: &mut DCEL) {
 	dcel.halfedges[line_needs_prev].origin = end_vertex_ind;
 }
 
+/// Do the three points, in this order, make a left turn?
 pub fn makes_left_turn(pt1: Point, pt2: Point, pt3: Point) -> bool {
 	let x1 = pt1.x();
 	let x2 = pt2.x();

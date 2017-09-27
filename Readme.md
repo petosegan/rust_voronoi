@@ -4,7 +4,7 @@ This is a Rust implementation of Fortune's Linesweep algorithm for computing Vor
 ## Usage
 To use, add the following line to `Cargo.toml` under `[dependencies]`:
 ```toml
-voronoi = "0.1.0"
+voronoi = "0.1.2"
 ```
 or alternatively,
 ```toml
