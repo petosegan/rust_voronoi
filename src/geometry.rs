@@ -26,8 +26,11 @@ pub fn segment_intersection(seg1: Segment, seg2: Segment) -> Option<Point> {
     return Some(a + r * t);
 }
 
-pub fn circle_bottom(triple_site: TripleSite) -> OrderedFloat<f64> {
+pub fn circle_bottom(triple_site: TripleSite) -> Option<OrderedFloat<f64>> {
 	let circle_center = circle_center(triple_site);
+	if let None = circle_center { return None; }
+	let circle_center = circle_center.unwrap();
+
 	let (_, _, p3) = triple_site;
 	let x3 = p3.x();
 	let y3 = p3.y();
@@ -36,12 +39,10 @@ pub fn circle_bottom(triple_site: TripleSite) -> OrderedFloat<f64> {
 
 	let r = ((x3 - x_cen) * (x3 - x_cen) + (y3 - y_cen) * (y3 - y_cen)).sqrt();
 
-	return OrderedFloat::<f64>(y_cen - r);
+	return Some(OrderedFloat::<f64>(y_cen - r));
 }
 
-// TODO: handle all the special cases
-pub fn circle_center(triple_site: TripleSite) -> Point {
-	// trace!("Finding center for {}, {}, {}", triple_site.0, triple_site.1, triple_site.2);
+pub fn circle_center(triple_site: TripleSite) -> Option<Point> {
 	let (p1, p2, p3) = triple_site;
 	let x1 = p1.x();
 	let x2 = p2.x();
@@ -60,12 +61,17 @@ pub fn circle_center(triple_site: TripleSite) -> Point {
 	let numer = c1 * a2 - c2 * a1;
 	let denom = b1 * a2 - b2 * a1;
 
+	if denom == 0.0 { return None; }
 	let y_cen = numer / denom;
 
-	let x_cen = (c2 - b2 * y_cen) / a2;
-	// trace!("center at {}, {}", x_cen, y_cen);
 
-	return Point::new(x_cen, y_cen);
+	let x_cen = if a2 != 0.0 {
+		(c2 - b2 * y_cen) / a2
+	} else {
+		(c1 - b1 * y_cen) / a1
+	};
+
+	return Some(Point::new(x_cen, y_cen));
 }
 
 // see http://www.kmschaal.de/Diplomarbeit_KevinSchaal.pdf, pg 27
@@ -81,7 +87,6 @@ pub fn breakpoints_converge(triple_site: TripleSite) -> bool {
 	(ay - by) * (bx - cx) > (by - cy) * (ax - bx)
 }
 
-// TODO: cover py1 = py2 case, and py1 = yl
 pub fn get_breakpoint_x(bp: &BreakPoint, yl: f64) -> f64 {
 	let ax = bp.left_site.x();
 	let bx = bp.right_site.x();
@@ -97,7 +102,11 @@ pub fn get_breakpoint_x(bp: &BreakPoint, yl: f64) -> f64 {
 	let numer = ay_s * bx_s - discrim.sqrt();
 	let denom = ay_s - by_s;
 
-	let mut x_bp = numer / denom;
+	let mut x_bp = if denom != 0.0 {
+		numer / denom
+	} else {
+		bx_s / 2.
+	};
 	x_bp += ax; // shift back to original frame
 
 	return x_bp;
@@ -123,12 +132,39 @@ mod tests {
     #[test]
     fn simple_circle_center() {
     	let circle_triple = (Point::new(-1.0, 0.0), Point::new(0.0, 1.0), Point::new(1.0, 0.0));
-        assert_eq!(circle_center(circle_triple), Point::new(0.0, 0.0));
+        assert_eq!(circle_center(circle_triple).unwrap(), Point::new(0.0, 0.0));
     }
 
     #[test]
     fn simple_circle_bottom() {
     	let circle_triple = (Point::new(-1.0, 0.0), Point::new(0.0, 1.0), Point::new(1.0, 0.0));
-    	assert_eq!(circle_bottom(circle_triple), OrderedFloat(-1.0));
+    	assert_eq!(circle_bottom(circle_triple).unwrap(), OrderedFloat(-1.0));
+    }
+
+    #[test]
+    fn degenerate_circle() {
+    	let circle_triple = (Point::new(-1.0, 0.0), Point::new(1.0, 0.0), Point::new(0.0, 0.0));
+    	assert_eq!(circle_bottom(circle_triple), None);
+    }
+
+    #[test]
+    fn simple_segments_intersect() {
+    	let line1 = [Point::new(-1.0, 0.0), Point::new(1.0, 0.0)];
+        let line2 = [Point::new(0.0, -1.0), Point::new(0.0, 1.0)];
+        assert_eq!(segment_intersection(line1, line2), Some(Point::new(0.0, 0.0)));
+    }
+
+    #[test]
+    fn tee_segments_intersect() {
+        let line1 = [Point::new(-1.0, 0.0), Point::new(1.0, 0.0)];
+        let line2 = [Point::new(0.0, 0.0), Point::new(0.0, 1.0)];
+        assert_eq!(segment_intersection(line1, line2), Some(Point::new(0.0, 0.0)));
+    }
+
+    #[test]
+    fn simple_segments_nonintersect() {
+        let line1 = [Point::new(-1.0, 10.0), Point::new(1.0, 10.0)];
+        let line2 = [Point::new(0.0, -1.0), Point::new(0.0, 1.0)];
+        assert_eq!(segment_intersection(line1, line2), None);
     }
 }

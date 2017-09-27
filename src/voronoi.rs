@@ -82,6 +82,7 @@ fn remove_circle_event(this_arc: usize, queue: &mut EventQueue, beachline: &mut 
 }
 
 fn make_circle_event(leaf: usize, triple: TripleSite, queue: &mut EventQueue, beachline: &mut BeachLine) {
+	if let None = circle_center(triple) { return; }
 	let this_event = VoronoiEvent::Circle {0: leaf, 1: triple};
 	let circle_event_ind = queue.events.len();
 	if let BeachItem::Leaf(ref mut arc) = beachline.nodes[leaf].item {
@@ -217,7 +218,7 @@ fn handle_circle_event(
 	let (twin1, twin2) = dcel.add_twins();
 
 	// make a vertex at the circle center
-	let circle_center = circle_center(triplesite);
+	let circle_center = circle_center(triplesite).unwrap();
 	let center_vertex = Vertex { coordinates: circle_center, incident_edge: twin1, alive: true};
 	let center_vertex_ind = dcel.vertices.len();
 	dcel.vertices.push(center_vertex);
@@ -317,4 +318,37 @@ fn extend_edges(beachline: &BeachLine, dcel: &mut DCEL) {
 		} else { break; }
 	}
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dcel::make_polygons;
+
+    #[test]
+    fn readme_example() {
+    	let vor_pts = vec![Point::new(0.0, 1.0), Point::new(2.0, 3.0), Point::new(10.0, 12.0)];
+		let vor_diagram = voronoi(vor_pts, 800.);
+		let vor_polys = make_polygons(&vor_diagram);
+		assert_eq!(vor_polys.len(), 3);
+    }
+
+    #[test]
+    #[ignore]
+    fn degenerate_example_horz() {
+    	let vor_pts = vec![Point::new(10.0, 1.0), Point::new(20.0, 1.0), Point::new(30.0, 1.0)];
+    	let num_pts = vor_pts.len();
+		let vor_diagram = voronoi(vor_pts, 800.);
+		let vor_polys = make_polygons(&vor_diagram);
+		assert_eq!(vor_polys.len(), num_pts);
+    }
+
+    #[test]
+    fn degenerate_example_vert() {
+    	let vor_pts = vec![Point::new(1.0, 10.0), Point::new(1.0, 20.0), Point::new(1.0, 30.0), Point::new(1.0, 40.0)];
+    	let num_pts = vor_pts.len();
+		let vor_diagram = voronoi(vor_pts, 800.);
+		let vor_polys = make_polygons(&vor_diagram);
+		assert_eq!(vor_polys.len(), num_pts);
+    }
 }

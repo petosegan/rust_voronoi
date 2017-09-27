@@ -29,7 +29,7 @@ impl VoronoiEvent {
 	pub fn get_y(&self) -> OrderedFloat<f64> {
 		match *self {
 			VoronoiEvent::Site(ref pt) => pt.y,
-			VoronoiEvent::Circle(_, triplesite) => circle_bottom(triplesite),
+			VoronoiEvent::Circle(_, triplesite) => circle_bottom(triplesite).unwrap(),
 		}
 	}
 }

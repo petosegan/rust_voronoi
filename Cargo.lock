@@ -1,6 +1,6 @@
 [root]
 name = "voronoi"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "ordered-float 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
