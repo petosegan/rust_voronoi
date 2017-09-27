@@ -1,5 +1,7 @@
-# rust_voronoi
+# voronoi
 This is a Rust implementation of Fortune's Linesweep algorithm for computing Voronoi diagrams.
+
+[Online Documentation](https://docs.rs/voronoi/0.1.2/voronoi/)
 
 ## Usage
 To use, add the following line to `Cargo.toml` under `[dependencies]`:
