@@ -7,8 +7,6 @@
 
 //! A Rust implementation of Fortune's Linesweep algorithm for computing Voronoi diagrams.
 
-#[macro_use]
-extern crate log;
 extern crate rand;
 extern crate ordered_float;
 

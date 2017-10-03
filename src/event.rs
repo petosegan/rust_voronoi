@@ -1,7 +1,6 @@
 use std::fmt;
 use point::Point;
 use ordered_float::OrderedFloat;
-use geometry::circle_bottom;
 use beachline::{BeachLine, BeachItem};
 
 const NIL: usize = !0;
@@ -13,14 +12,14 @@ type TripleSite = (Point, Point, Point);
 #[derive(Debug, Clone)]
 pub enum VoronoiEvent {
 	Site(Point),
-	Circle(usize, TripleSite), // index of disappearing arc, points of circle
+	Circle(usize, TripleSite, OrderedFloat<f64>), // index of disappearing arc, points of circle, bottom of circle
 }
 
 impl fmt::Display for VoronoiEvent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     	match *self {
         	VoronoiEvent::Site(pt) => { write!(f, "Site at {}", pt) },
-        	VoronoiEvent::Circle(leaf, triplesite) => { write!(f, "Circle for leaf {}, pts {}, {}, {}", leaf, triplesite.0, triplesite.1, triplesite.2) },
+        	VoronoiEvent::Circle(leaf, triplesite, bottom) => { write!(f, "Circle for leaf {}, points {}, {}, {}, bottom {}", leaf, triplesite.0, triplesite.1, triplesite.2, bottom) },
         }
     }
 }
@@ -29,7 +28,7 @@ impl VoronoiEvent {
 	pub fn get_y(&self) -> OrderedFloat<f64> {
 		match *self {
 			VoronoiEvent::Site(ref pt) => pt.y,
-			VoronoiEvent::Circle(_, triplesite) => circle_bottom(triplesite).unwrap(),
+			VoronoiEvent::Circle(_, _, bottom) => bottom,
 		}
 	}
 }
@@ -68,7 +67,6 @@ impl EventQueue {
 	}
 	pub fn push(&mut self, event: VoronoiEvent, beachline: &mut BeachLine) {
 		let new_node_ind = self.events.len();
-		info!("pushing event {}", new_node_ind);
 		self.events.push(event);
 		self.bubble_up(new_node_ind, beachline);
 	}
@@ -76,7 +74,6 @@ impl EventQueue {
 	// assumes that the only violation of the heap property
 	// is that the bubble might be larger than nodes above it
 	fn bubble_up(&mut self, bubble_node: usize, beachline: &mut BeachLine) {
-		info!("bubbling up node {}", bubble_node);
 		let mut current_parent = parent(bubble_node);
 		let mut current_bubble = bubble_node;
 		let bubble_key = self.events[bubble_node].get_y();
@@ -109,13 +106,12 @@ impl EventQueue {
 		}
 	}
 	fn swap(&mut self, node_a: usize, node_b: usize, beachline: &mut BeachLine) {
-		info!("swapping {} and {}", node_a, node_b);
 		let mut leaf_a = NIL;
 		let mut leaf_b = NIL;
-		if let VoronoiEvent::Circle(l_a, _) = self.events[node_a] {
+		if let VoronoiEvent::Circle(l_a, _, _) = self.events[node_a] {
 			leaf_a = l_a;
 		}
-		if let VoronoiEvent::Circle(l_b, _) = self.events[node_b] {
+		if let VoronoiEvent::Circle(l_b, _, _) = self.events[node_b] {
 			leaf_b = l_b;
 		}
 
@@ -125,7 +121,6 @@ impl EventQueue {
 
 		if leaf_a != NIL {
 			if let BeachItem::Leaf(ref mut arc_a) = beachline.nodes[leaf_a].item {
-				info!("swap a: switched arc {} to point to {}", leaf_a, node_b);
 				arc_a.site_event = Some(node_b);
 			} else {
 				panic!("circle event pointed to non-arc!");
@@ -133,7 +128,6 @@ impl EventQueue {
 		}
 		if leaf_b != NIL {
 			if let BeachItem::Leaf(ref mut arc_b) = beachline.nodes[leaf_b].item {
-				info!("swap b: switched arc {} to point to {}", leaf_b, node_a);
 				arc_b.site_event = Some(node_a);
 			} else {
 				panic!("circle event pointed to non-arc!");
@@ -150,12 +144,11 @@ impl EventQueue {
 		let result = self.events.pop();
 
 		let mut this_leaf = NIL;
-		if let Some(VoronoiEvent::Circle(leaf, _)) = result {
+		if let Some(VoronoiEvent::Circle(leaf, _, _)) = result {
 			this_leaf = leaf;
 		}
 		if this_leaf != NIL {
 			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[this_leaf].item {
-				info!("popped circle event, so pointed arc {} to None", this_leaf);
 				arc.site_event = None;
 			} else {
 				panic!("circle event pointed to non-arc!");
@@ -170,17 +163,15 @@ impl EventQueue {
 	}
 	pub fn remove(&mut self, removed: usize, beachline: &mut BeachLine) {
 		let heapsize = self.events.len()-1;
-		info!("removing node {}, heapsize is {}", removed, heapsize);
 		self.swap(removed, heapsize, beachline);
 		let removed_event = self.events.pop();
 
 		let mut this_leaf = NIL;
-		if let Some(VoronoiEvent::Circle(leaf, _)) = removed_event {
+		if let Some(VoronoiEvent::Circle(leaf, _, _)) = removed_event {
 			this_leaf = leaf;
 		}
 		if this_leaf != NIL {
 			if let BeachItem::Leaf(ref mut arc) = beachline.nodes[this_leaf].item {
-				info!("removed circle event, so pointed arc {} to None", this_leaf);
 				arc.site_event = None;
 			} else {
 				panic!("circle event pointed to non-arc!");
