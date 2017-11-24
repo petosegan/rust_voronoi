@@ -1,6 +1,5 @@
 use std::fmt;
 use point::Point;
-use ordered_float::OrderedFloat;
 use beachline::{BeachLine, BeachItem};
 
 const NIL: usize = !0;
@@ -21,10 +20,10 @@ impl fmt::Debug for VoronoiEvent {
 }
 
 impl VoronoiEvent {
-    pub fn get_y(&self) -> OrderedFloat<f64> {
+    pub fn get_y(&self) -> f64 {
         match *self {
-            VoronoiEvent::Site(ref pt) => pt.y,
-            VoronoiEvent::Circle(center, radius, _) => OrderedFloat(center.y() + radius),
+            VoronoiEvent::Site(ref pt) => pt.y(),
+            VoronoiEvent::Circle(center, radius, _) => center.y() + radius,
         }
     }
 }
