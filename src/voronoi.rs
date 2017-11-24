@@ -19,10 +19,10 @@ pub fn voronoi(points: Vec<Point>, boxsize: f64) -> DCEL {
 
     while !event_queue.is_empty() {
         trace!("\n\n");
-        trace!("Beachline: {}", beachline);
-        trace!("Queue: {}", event_queue);
+        trace!("Beachline: {:?}", beachline);
+        trace!("Queue: {:?}", event_queue);
         let this_event = event_queue.pop(&mut beachline).unwrap();
-        trace!("Popped event from queue: {}", this_event);
+        trace!("Popped event from queue: {:?}", this_event);
         handle_event(this_event, &mut event_queue, &mut beachline, &mut result);
     }
     add_bounding_box(boxsize, &beachline, &mut result);
@@ -38,7 +38,7 @@ fn handle_event(this_event: VoronoiEvent, queue: &mut EventQueue, beachline: &mu
 }
 
 fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachLine, result: &mut DCEL) {
-    trace!("Handling site event at {}", site);
+    trace!("Handling site event at {:?}", site);
     if beachline.is_empty() {
         trace!("Beachline was empty, inserting point.");
         beachline.insert_point(site);
@@ -53,7 +53,7 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
     let new_node = split_arc(arc_above, site, beachline, result);
 
     if let Some(left_triple) = beachline.get_leftward_triple(new_node) {
-        trace!("Checking leftward triple {}, {}, {}", left_triple.0, left_triple.1, left_triple.2);
+        trace!("Checking leftward triple {:?}, {:?}, {:?}", left_triple.0, left_triple.1, left_triple.2);
         if breakpoints_converge(left_triple) {
             trace!("Found converging triple");
             let left_arc = beachline.get_left_arc(Some(new_node)).unwrap();
@@ -61,7 +61,7 @@ fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachL
         }
     }
     if let Some(right_triple) = beachline.get_rightward_triple(new_node) {
-        trace!("Checking rightward triple {}, {}, {}", right_triple.0, right_triple.1, right_triple.2);
+        trace!("Checking rightward triple {:?}, {:?}, {:?}", right_triple.0, right_triple.1, right_triple.2);
         if breakpoints_converge(right_triple) {
             trace!("Found converging triple");
             let right_arc = beachline.get_right_arc(Some(new_node)).unwrap();
@@ -245,14 +245,14 @@ fn handle_circle_event(
     }
 
     if let Some(left_triple) = beachline.get_centered_triple(left_neighbor) {
-        trace!("Checking leftward triple {}, {}, {}", left_triple.0, left_triple.1, left_triple.2);
+        trace!("Checking leftward triple {:?}, {:?}, {:?}", left_triple.0, left_triple.1, left_triple.2);
         if breakpoints_converge(left_triple) {
             trace!("Found converging triple");
             make_circle_event(left_neighbor, left_triple, queue, beachline);
         }
     }
     if let Some(right_triple) = beachline.get_centered_triple(right_neighbor) {
-        trace!("Checking rightward triple {}, {}, {}", right_triple.0, right_triple.1, right_triple.2);
+        trace!("Checking rightward triple {:?}, {:?}, {:?}", right_triple.0, right_triple.1, right_triple.2);
         if breakpoints_converge(right_triple) {
             trace!("Found converging triple");
             make_circle_event(right_neighbor, right_triple, queue, beachline);
@@ -299,7 +299,7 @@ fn extend_edges(beachline: &BeachLine, dcel: &mut DCEL) {
             BeachItem::Leaf(_) => {},
             BeachItem::Internal(ref breakpoint) => {
                 let this_edge = breakpoint.halfedge;
-                trace!("Extending halfedge {} with breakpoint {}, {}", this_edge, breakpoint.left_site, breakpoint.right_site);
+                trace!("Extending halfedge {:?} with breakpoint {:?}, {:?}", this_edge, breakpoint.left_site, breakpoint.right_site);
                 let this_x = get_breakpoint_x(&breakpoint, -1000.0);
                 let this_y = get_breakpoint_y(&breakpoint, -1000.0);
 

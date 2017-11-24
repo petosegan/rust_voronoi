@@ -5,18 +5,17 @@ use geometry::get_breakpoint_x;
 const NIL: usize = !0;
 type TripleSite = (Point, Point, Point);
 
-#[derive(Debug)]
 pub struct BeachLine {
     pub nodes: Vec<BeachNode>,
     pub root: usize,
 }
 
-impl fmt::Display for BeachLine {
+impl fmt::Debug for BeachLine {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut beachline_disp = String::new();
 
         for (index, node) in self.nodes.iter().enumerate() {
-            beachline_disp.push_str(format!("{}: {}", index, node).as_str());
+            beachline_disp.push_str(format!("{}: {:?}", index, node).as_str());
             beachline_disp.push_str("\n");
         }
 
@@ -24,7 +23,6 @@ impl fmt::Display for BeachLine {
     }
 }
 
-#[derive(Debug)]
 pub struct BeachNode {
     pub parent: Option<usize>,
     pub left_child: Option<usize>,
@@ -32,9 +30,9 @@ pub struct BeachNode {
     pub item: BeachItem,
 }
 
-impl fmt::Display for BeachNode {
+impl fmt::Debug for BeachNode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "p: {:?}, l: {:?}, r: {:?}, item: {}", self.parent, self.left_child, self.right_child, self.item)
+        write!(f, "p: {:?}, l: {:?}, r: {:?}, item: {:?}", self.parent, self.left_child, self.right_child, self.item)
     }
 }
 
@@ -52,30 +50,28 @@ impl BeachNode {
     }
 }
 
-#[derive(Debug)]
 pub enum BeachItem {
     Leaf(Arc),
     Internal(BreakPoint),
 }
 
-impl fmt::Display for BeachItem {
+impl fmt::Debug for BeachItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            BeachItem::Leaf(ref arc) => write!(f, "Leaf: {}", arc),
-            BeachItem::Internal(ref bp) => write!(f, "Internal: {}", bp),
+            BeachItem::Leaf(ref arc) => write!(f, "Leaf: {:?}", arc),
+            BeachItem::Internal(ref bp) => write!(f, "Internal: {:?}", bp),
         }
     }
 }
 
-#[derive(Debug)]
 pub struct Arc {
     pub site: Point,
     pub site_event: Option<usize>, // index to circle event in EventQueue
 }
 
-impl fmt::Display for Arc {
+impl fmt::Debug for Arc {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "site: {}, site_event: {:?}", self.site, self.site_event)
+        write!(f, "site: {:?}, site_event: {:?}", self.site, self.site_event)
     }
 }
 
@@ -85,16 +81,15 @@ impl Arc {
     }
 }
 
-#[derive(Debug)]
 pub struct BreakPoint {
     pub left_site: Point,
     pub right_site: Point,
     pub halfedge: usize, // index of halfedge
 }
 
-impl fmt::Display for BreakPoint {
+impl fmt::Debug for BreakPoint {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "left: {}, right: {}, halfedge: {}", self.left_site, self.right_site, self.halfedge)
+        write!(f, "left: {:?}, right: {:?}, halfedge: {}", self.left_site, self.right_site, self.halfedge)
     }
 }
 

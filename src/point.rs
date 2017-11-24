@@ -5,7 +5,7 @@ use ordered_float::OrderedFloat;
 use std::cmp::Ordering;
 
 /// A point in two dimensions
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Point {
     /// x coordinate
     pub x: OrderedFloat<f64>,
@@ -30,7 +30,7 @@ impl Point {
     }
 }
 
-impl fmt::Display for Point {
+impl fmt::Debug for Point {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({0:.1}, {1:.1})", self.x(), self.y())
     }

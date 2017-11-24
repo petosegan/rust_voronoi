@@ -6,7 +6,6 @@ use geometry::{Segment, segment_intersection};
 const NIL: usize = !0;
 
 /// Doubly Connected Edge List representation of a subdivision of the plane.
-#[derive(Debug)]
 pub struct DCEL {
     /// Vertices
     pub vertices: Vec<Vertex>,
@@ -101,13 +100,13 @@ impl DCEL {
     }
 }
 
-impl fmt::Display for DCEL {
+impl fmt::Debug for DCEL {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut vertices_disp = String::new();
 
         for (index, node) in self.vertices.iter().enumerate() {
             if node.alive {
-                vertices_disp.push_str(format!("{}: {}\n", index, node).as_str());
+                vertices_disp.push_str(format!("{}: {:?}\n", index, node).as_str());
             }
         }
 
@@ -123,7 +122,7 @@ impl fmt::Display for DCEL {
 
         for (index, node) in self.halfedges.iter().enumerate() {
             if node.alive {
-                halfedges_disp.push_str(format!("{}: {}\n", index, node).as_str());
+                halfedges_disp.push_str(format!("{}: {:?}\n", index, node).as_str());
             }
         }
 
@@ -131,7 +130,6 @@ impl fmt::Display for DCEL {
     }
 }
 
-#[derive(Debug)]
 /// A vertex of a DCEL
 pub struct Vertex {
     /// (x, y) coordinates
@@ -142,13 +140,12 @@ pub struct Vertex {
     pub alive: bool,
 }
 
-impl fmt::Display for Vertex {
+impl fmt::Debug for Vertex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}, edge: {}", self.coordinates, self.incident_edge)
+        write!(f, "{:?}, edge: {}", self.coordinates, self.incident_edge)
     }
 }
 
-#[derive(Debug)]
 /// A halfedge of a DCEL
 pub struct HalfEdge {
     /// The index of the vertex at the start of the halfedge
@@ -162,7 +159,7 @@ pub struct HalfEdge {
     alive: bool,
 }
 
-impl fmt::Display for HalfEdge {
+impl fmt::Debug for HalfEdge {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "origin: {}, twin: {}, next: {}", self.origin, self.twin, self.next)
     }

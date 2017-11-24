@@ -10,17 +10,17 @@ type TripleSite = (Point, Point, Point);
 // This circle event representation is redundant,
 // but it means I can get the height of the event
 // without passing in the BeachLine
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum VoronoiEvent {
     Site(Point),
     Circle(usize, TripleSite), // index of disappearing arc, points of circle
 }
 
-impl fmt::Display for VoronoiEvent {
+impl fmt::Debug for VoronoiEvent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            VoronoiEvent::Site(pt) => { write!(f, "Site at {}", pt) },
-            VoronoiEvent::Circle(leaf, triplesite) => { write!(f, "Circle for leaf {}, pts {}, {}, {}", leaf, triplesite.0, triplesite.1, triplesite.2) },
+            VoronoiEvent::Site(pt) => { write!(f, "Site at {:?}", pt) },
+            VoronoiEvent::Circle(leaf, triplesite) => { write!(f, "Circle for leaf {}, pts {:?}, {:?}, {:?}", leaf, triplesite.0, triplesite.1, triplesite.2) },
         }
     }
 }
@@ -49,12 +49,12 @@ fn left_child(node: usize) -> usize {
     2 * node + 2
 }
 
-impl fmt::Display for EventQueue {
+impl fmt::Debug for EventQueue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut queue_disp = String::new();
 
         for (index, event) in self.events.iter().enumerate() {
-            queue_disp.push_str(format!("{}: {}", index, event).as_str());
+            queue_disp.push_str(format!("{}: {:?}", index, event).as_str());
             queue_disp.push_str("\n");
         }
 
