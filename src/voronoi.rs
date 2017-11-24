@@ -28,8 +28,8 @@ pub fn voronoi(points: Vec<Point>, boxsize: f64) -> DCEL {
             VoronoiEvent::Site(pt) => {
                 handle_site_event(pt, &mut event_queue,  &mut beachline, &mut result);
             }
-            VoronoiEvent::Circle(leaf, triplesite) => {
-                handle_circle_event(leaf, triplesite, &mut event_queue, &mut beachline, &mut result);
+            VoronoiEvent::Circle(center, _, leaf) => {
+                handle_circle_event(leaf, center, &mut event_queue, &mut beachline, &mut result);
             }
         }
     }
@@ -83,13 +83,15 @@ fn remove_circle_event(this_arc: usize, queue: &mut EventQueue, beachline: &mut 
 }
 
 fn make_circle_event(leaf: usize, triple: TripleSite, queue: &mut EventQueue, beachline: &mut BeachLine) {
-    if let None = circle_center(triple) { return; }
-    let this_event = VoronoiEvent::Circle {0: leaf, 1: triple};
-    let circle_event_ind = queue.events.len();
-    if let BeachItem::Leaf(ref mut arc) = beachline.nodes[leaf].item {
-        arc.site_event = Some(circle_event_ind);
+    if let Some(circle_center) = circle_center(triple) {
+        let circle_bottom = circle_bottom(triple).unwrap();
+        let this_event = VoronoiEvent::Circle {0: circle_center, 1: circle_bottom.0 - circle_center.y(), 2: leaf};
+        let circle_event_ind = queue.events.len();
+        if let BeachItem::Leaf(ref mut arc) = beachline.nodes[leaf].item {
+            arc.site_event = Some(circle_event_ind);
+        }
+        queue.push(this_event, beachline);
     }
-    queue.push(this_event, beachline);
 }
 
 #[allow(non_snake_case)]
@@ -202,7 +204,7 @@ fn delete_leaf(leaf: usize, beachline: &mut BeachLine) -> (usize, usize, usize, 
 
 fn handle_circle_event(
     leaf: usize,
-    triplesite: TripleSite,
+    circle_center: Point,
     queue: &mut EventQueue,
     beachline: &mut BeachLine,
     dcel: &mut DCEL) {
@@ -219,7 +221,6 @@ fn handle_circle_event(
     let (twin1, twin2) = dcel.add_twins();
 
     // make a vertex at the circle center
-    let circle_center = circle_center(triplesite).unwrap();
     let center_vertex = Vertex { coordinates: circle_center, incident_edge: twin1, alive: true};
     let center_vertex_ind = dcel.vertices.len();
     dcel.vertices.push(center_vertex);

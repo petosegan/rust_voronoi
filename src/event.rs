@@ -1,26 +1,21 @@
 use std::fmt;
 use point::Point;
 use ordered_float::OrderedFloat;
-use geometry::circle_bottom;
 use beachline::{BeachLine, BeachItem};
 
 const NIL: usize = !0;
-type TripleSite = (Point, Point, Point);
 
-// This circle event representation is redundant,
-// but it means I can get the height of the event
-// without passing in the BeachLine
 #[derive(Clone)]
 pub enum VoronoiEvent {
     Site(Point),
-    Circle(usize, TripleSite), // index of disappearing arc, points of circle
+    Circle(Point /* center */, f64 /* radius */, usize /* index of disappearing arc */),
 }
 
 impl fmt::Debug for VoronoiEvent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             VoronoiEvent::Site(pt) => { write!(f, "Site at {:?}", pt) },
-            VoronoiEvent::Circle(leaf, triplesite) => { write!(f, "Circle for leaf {}, pts {:?}, {:?}, {:?}", leaf, triplesite.0, triplesite.1, triplesite.2) },
+            VoronoiEvent::Circle(center, radius, leaf) => { write!(f, "Circle for leaf {}, center {:?}, radius {:?}", leaf, center, radius) },
         }
     }
 }
@@ -29,7 +24,7 @@ impl VoronoiEvent {
     pub fn get_y(&self) -> OrderedFloat<f64> {
         match *self {
             VoronoiEvent::Site(ref pt) => pt.y,
-            VoronoiEvent::Circle(_, triplesite) => circle_bottom(triplesite).unwrap(),
+            VoronoiEvent::Circle(center, radius, _) => OrderedFloat(center.y() + radius),
         }
     }
 }
@@ -115,10 +110,10 @@ impl EventQueue {
         info!("swapping {} and {}", node_a, node_b);
         let mut leaf_a = NIL;
         let mut leaf_b = NIL;
-        if let VoronoiEvent::Circle(l_a, _) = self.events[node_a] {
+        if let VoronoiEvent::Circle(_, _, l_a) = self.events[node_a] {
             leaf_a = l_a;
         }
-        if let VoronoiEvent::Circle(l_b, _) = self.events[node_b] {
+        if let VoronoiEvent::Circle(_, _, l_b) = self.events[node_b] {
             leaf_b = l_b;
         }
 
@@ -155,7 +150,7 @@ impl EventQueue {
         let result = self.events.pop();
 
         let mut this_leaf = NIL;
-        if let Some(VoronoiEvent::Circle(leaf, _)) = result {
+        if let Some(VoronoiEvent::Circle(_, _, leaf)) = result {
             this_leaf = leaf;
         }
         if this_leaf != NIL {
@@ -181,7 +176,7 @@ impl EventQueue {
         let removed_event = self.events.pop();
 
         let mut this_leaf = NIL;
-        if let Some(VoronoiEvent::Circle(leaf, _)) = removed_event {
+        if let Some(VoronoiEvent::Circle(_, _, leaf)) = removed_event {
             this_leaf = leaf;
         }
         if this_leaf != NIL {
