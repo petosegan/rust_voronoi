@@ -5,7 +5,7 @@ use ordered_float::OrderedFloat;
 use std::cmp::Ordering;
 
 /// A point in two dimensions
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Point {
     /// x coordinate
     pub x: OrderedFloat<f64>,
