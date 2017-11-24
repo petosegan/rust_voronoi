@@ -8,7 +8,6 @@ type TripleSite = (Point, Point, Point);
 #[derive(Debug)]
 pub struct BeachLine {
     pub nodes: Vec<BeachNode>,
-    pub y_line: f64,
     pub root: usize,
 }
 
@@ -21,7 +20,7 @@ impl fmt::Display for BeachLine {
             beachline_disp.push_str("\n");
         }
 
-        write!(f, "\nRoot: {}\ny_line: {}\n{}", self.root, self.y_line, beachline_disp)
+        write!(f, "\nRoot: {}\n{}", self.root, beachline_disp)
     }
 }
 
@@ -107,7 +106,7 @@ impl BreakPoint {
 
 impl BeachLine {
     pub fn new() -> Self {
-        BeachLine { nodes: vec![], y_line: 0.0, root: NIL }
+        BeachLine { nodes: vec![], root: NIL }
     }
 
     pub fn is_empty(&self) -> bool {
