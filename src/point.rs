@@ -18,10 +18,12 @@ impl Point {
     pub fn new(x: f64, y: f64) -> Self {
         Point {x: OrderedFloat::<f64>(x), y: OrderedFloat::<f64>(y)}
     }
+
     /// Getter for the x coordinate.
     pub fn x(&self) -> f64 {
         self.x.into_inner()
     }
+
     /// Getter for the y coordinate.
     pub fn y(&self) -> f64 {
         self.y.into_inner()
@@ -70,6 +72,7 @@ impl Point {
     pub fn cross(self, rhs: Point) -> f64 {
         self.x() * rhs.y() - self.y() * rhs.x()
     }
+
     /// Computes the dot product of two points, viewed as vectors from the origin.
     pub fn dot(self, rhs: Point) -> f64 {
         self.x() * rhs.x() + self.y() * rhs.y()

@@ -23,6 +23,7 @@ impl DCEL {
             halfedges: vec![],
             faces: vec![]}
     }
+
     /// Add two halfedges that are twins
     pub fn add_twins(&mut self) -> (usize, usize) {
         let mut he1 = HalfEdge::new();
@@ -35,11 +36,13 @@ impl DCEL {
         self.halfedges.push(he2);
         (start_index, start_index + 1)
     }
+
     /// Get the origin of a halfedge by index
     pub fn get_origin(&self, edge: usize) -> Point {
         let origin_ind = self.halfedges[edge].origin;
         return self.vertices[origin_ind].coordinates;
     }
+
     /// Set the previous edge of all halfedges
     /// Assumes that the DCEL is well-formed.
     pub fn set_prev(&mut self) {
@@ -57,6 +60,7 @@ impl DCEL {
             }
         }
     }
+
     fn remove_edge(&mut self, edge: usize) {
         let edge_prev = self.halfedges[edge].prev;
         let edge_next = self.halfedges[edge].next;
@@ -72,6 +76,7 @@ impl DCEL {
         self.halfedges[edge].alive = false;
         self.halfedges[twin].alive = false;
     }
+
     fn get_edges_around_vertex(&self, vertex: usize) -> Vec<usize> {
         let mut result = vec![];
         let start_edge = self.vertices[vertex].incident_edge;
@@ -84,6 +89,7 @@ impl DCEL {
         }
         return result;
     }
+
     /// Remove a vertex and all attached halfedges.
     /// Does not affect faces!!
     pub fn remove_vertex(&mut self, vertex: usize) {

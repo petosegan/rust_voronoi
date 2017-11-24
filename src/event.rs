@@ -66,6 +66,7 @@ impl EventQueue {
     pub fn new() -> Self {
         EventQueue { events: vec![] }
     }
+
     pub fn push(&mut self, event: VoronoiEvent, beachline: &mut BeachLine) {
         let new_node_ind = self.events.len();
         info!("pushing event {}", new_node_ind);
@@ -88,6 +89,7 @@ impl EventQueue {
             current_parent = parent(current_bubble);
         }
     }
+
     // assumes that the only violation of the heap property
     // is that the bubble might be smaller than nodes below it
     fn bubble_down(&mut self, bubble_node: usize, beachline: &mut BeachLine) {
@@ -108,6 +110,7 @@ impl EventQueue {
             self.bubble_down(largest, beachline);
         }
     }
+
     fn swap(&mut self, node_a: usize, node_b: usize, beachline: &mut BeachLine) {
         info!("swapping {} and {}", node_a, node_b);
         let mut leaf_a = NIL;
@@ -140,9 +143,11 @@ impl EventQueue {
             }
         }
     }
+
     pub fn is_empty(&self) -> bool {
         self.events.is_empty()
     }
+
     pub fn pop(&mut self, beachline: &mut BeachLine) -> Option<VoronoiEvent> {
         if self.is_empty() { return None; }
         let heapsize = self.events.len()-1;
@@ -168,6 +173,7 @@ impl EventQueue {
 
         return result;
     }
+
     pub fn remove(&mut self, removed: usize, beachline: &mut BeachLine) {
         let heapsize = self.events.len()-1;
         info!("removing node {}, heapsize is {}", removed, heapsize);

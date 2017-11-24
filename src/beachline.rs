@@ -43,6 +43,7 @@ impl BeachNode {
     fn make_root(item: BeachItem) -> Self {
         BeachNode { parent: None, left_child: None, right_child: None, item: item}
     }
+
     pub fn make_arc(parent: Option<usize>, item: BeachItem) -> Self {
         if let BeachItem::Leaf(_) = item {
             BeachNode { parent: parent, left_child: None, right_child: None, item: item}
@@ -108,9 +109,11 @@ impl BeachLine {
     pub fn new() -> Self {
         BeachLine { nodes: vec![], y_line: 0.0, root: NIL }
     }
+
     pub fn is_empty(&self) -> bool {
         self.nodes.is_empty()
     }
+
     pub fn insert_point(&mut self, pt: Point) {
         let this_arc = Arc {site: pt, site_event: None};
         let this_item = BeachItem::Leaf(this_arc);
@@ -118,6 +121,7 @@ impl BeachLine {
         self.nodes.push(this_node);
         self.root = self.nodes.len() - 1;
     }
+
     pub fn get_arc_above(&self, pt: Point) -> usize {
         if self.is_empty() { panic!("can't get_arc_above on empty beachline!"); }
         let mut current_node = self.root;
@@ -132,6 +136,7 @@ impl BeachLine {
             }
         }
     }
+
     pub fn tree_minimum(&self, root: usize) -> usize {
         let mut current_node = root;
         while let Some(left) = self.nodes[current_node].left_child {
@@ -139,6 +144,7 @@ impl BeachLine {
         }
         current_node
     }
+
     pub fn tree_maximum(&self, root: usize) -> usize {
         let mut current_node = root;
         while let Some(right) = self.nodes[current_node].right_child {
@@ -146,6 +152,7 @@ impl BeachLine {
         }
         current_node
     }
+
     pub fn successor(&self, node: usize) -> Option<usize> {
         if let Some(right) = self.nodes[node].right_child {
             return Some(self.tree_minimum(right));
@@ -158,6 +165,7 @@ impl BeachLine {
         }
         return current_parent;
     }
+
     pub fn predecessor(&self, node: usize) -> Option<usize> {
         if let Some(left) = self.nodes[node].left_child {
             return Some(self.tree_maximum(left));
@@ -170,6 +178,7 @@ impl BeachLine {
         }
         return current_parent;
     }
+
     pub fn get_left_arc(&self, node: Option<usize>) -> Option<usize> {
         if let None = node { return None; }
         let node = node.unwrap();
@@ -179,6 +188,7 @@ impl BeachLine {
             None
         }
     }
+
     pub fn get_right_arc(&self, node: Option<usize>) -> Option<usize> {
         if let None = node { return None; }
         let node = node.unwrap();
@@ -188,6 +198,7 @@ impl BeachLine {
             None
         }
     }
+
     pub fn get_leftward_triple(&self, node: usize) -> Option<TripleSite> {
         let left_arc = self.get_left_arc(Some(node));
         let left_left_arc = self.get_left_arc(left_arc);
@@ -200,6 +211,7 @@ impl BeachLine {
             return Some((left_left_site.unwrap(), left_site.unwrap(), this_site.unwrap()));
         } else { return None; }
     }
+
     pub fn get_rightward_triple(&self, node: usize) -> Option<TripleSite> {
         let right_arc = self.get_right_arc(Some(node));
         let right_right_arc = self.get_right_arc(right_arc);
@@ -212,6 +224,7 @@ impl BeachLine {
             return Some((this_site.unwrap(), right_site.unwrap(), right_right_site.unwrap()));
         } else { return None; }
     }
+
     pub fn get_centered_triple(&self, node: usize) -> Option<TripleSite> {
         let right_arc = self.get_right_arc(Some(node));
         let left_arc = self.get_left_arc(Some(node));
@@ -224,6 +237,7 @@ impl BeachLine {
             return Some((left_site.unwrap(), this_site.unwrap(), right_site.unwrap()));
         } else { return None; }
     }
+
     pub fn get_site(&self, node: Option<usize>) -> Option<Point> {
         if let None = node { return None; }
         let node = node.unwrap();
@@ -233,6 +247,7 @@ impl BeachLine {
             return None;
         }
     }
+
     pub fn set_right_site(&mut self, node: usize, site: Point) {
         if let BeachItem::Internal(ref mut bp) = self.nodes[node].item {
             bp.right_site = site;
@@ -240,6 +255,7 @@ impl BeachLine {
             panic!("target of set_site should be internal");
         }
     }
+
     pub fn set_left_site(&mut self, node: usize, site: Point) {
         if let BeachItem::Internal(ref mut bp) = self.nodes[node].item {
             bp.left_site = site;
@@ -247,6 +263,7 @@ impl BeachLine {
             panic!("target of set_site should be internal");
         }
     }
+
     pub fn get_edge(&self, node: usize) -> usize {
         if let BeachItem::Internal(ref breakpoint) = self.nodes[node].item {
             breakpoint.halfedge
