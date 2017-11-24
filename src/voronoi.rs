@@ -23,18 +23,19 @@ pub fn voronoi(points: Vec<Point>, boxsize: f64) -> DCEL {
         trace!("Queue: {:?}", event_queue);
         let this_event = event_queue.pop(&mut beachline).unwrap();
         trace!("Popped event from queue: {:?}", this_event);
-        handle_event(this_event, &mut event_queue, &mut beachline, &mut result);
+
+        match this_event {
+            VoronoiEvent::Site(pt) => {
+                handle_site_event(pt, &mut event_queue,  &mut beachline, &mut result);
+            }
+            VoronoiEvent::Circle(leaf, triplesite) => {
+                handle_circle_event(leaf, triplesite, &mut event_queue, &mut beachline, &mut result);
+            }
+        }
     }
     add_bounding_box(boxsize, &beachline, &mut result);
     add_faces(&mut result);
     return result;
-}
-
-fn handle_event(this_event: VoronoiEvent, queue: &mut EventQueue, beachline: &mut BeachLine, result: &mut DCEL) {
-    match this_event {
-        VoronoiEvent::Site(pt) => { handle_site_event(pt, queue, beachline, result); },
-        VoronoiEvent::Circle(leaf, triplesite) => { handle_circle_event(leaf, triplesite, queue, beachline, result); }
-    }
 }
 
 fn handle_site_event(site: Point, queue: &mut EventQueue, beachline: &mut BeachLine, result: &mut DCEL) {

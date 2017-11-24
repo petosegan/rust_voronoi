@@ -157,7 +157,7 @@ impl BeachLine {
             current_node = current_parent;
             current_parent = self.nodes[current_parent.unwrap()].parent;
         }
-        return current_parent;
+        current_parent
     }
 
     pub fn predecessor(&self, node: usize) -> Option<usize> {
@@ -174,23 +174,11 @@ impl BeachLine {
     }
 
     pub fn get_left_arc(&self, node: Option<usize>) -> Option<usize> {
-        if let None = node { return None; }
-        let node = node.unwrap();
-        if let Some(left) = self.predecessor(node) {
-            self.predecessor(left)
-        } else {
-            None
-        }
+        node.and_then(|node| self.predecessor(node)).and_then(|left| self.predecessor(left))
     }
 
     pub fn get_right_arc(&self, node: Option<usize>) -> Option<usize> {
-        if let None = node { return None; }
-        let node = node.unwrap();
-        if let Some(right) = self.successor(node) {
-            self.successor(right)
-        } else {
-            None
-        }
+        node.and_then(|node| self.successor(node)).and_then(|right| self.successor(right))
     }
 
     pub fn get_leftward_triple(&self, node: usize) -> Option<TripleSite> {
@@ -202,8 +190,8 @@ impl BeachLine {
         let left_left_site = self.get_site(left_left_arc);
 
         if this_site.is_some() && left_site.is_some() && left_left_site.is_some() {
-            return Some((left_left_site.unwrap(), left_site.unwrap(), this_site.unwrap()));
-        } else { return None; }
+            Some((left_left_site.unwrap(), left_site.unwrap(), this_site.unwrap()))
+        } else { None }
     }
 
     pub fn get_rightward_triple(&self, node: usize) -> Option<TripleSite> {
@@ -215,8 +203,8 @@ impl BeachLine {
         let right_right_site = self.get_site(right_right_arc);
 
         if this_site.is_some() && right_site.is_some() && right_right_site.is_some() {
-            return Some((this_site.unwrap(), right_site.unwrap(), right_right_site.unwrap()));
-        } else { return None; }
+            Some((this_site.unwrap(), right_site.unwrap(), right_right_site.unwrap()))
+        } else { None }
     }
 
     pub fn get_centered_triple(&self, node: usize) -> Option<TripleSite> {
@@ -228,18 +216,18 @@ impl BeachLine {
         let left_site = self.get_site(left_arc);
 
         if this_site.is_some() && right_site.is_some() && left_site.is_some() {
-            return Some((left_site.unwrap(), this_site.unwrap(), right_site.unwrap()));
-        } else { return None; }
+            Some((left_site.unwrap(), this_site.unwrap(), right_site.unwrap()))
+        } else { None }
     }
 
     pub fn get_site(&self, node: Option<usize>) -> Option<Point> {
-        if let None = node { return None; }
-        let node = node.unwrap();
-        if let BeachItem::Leaf(ref arc) = self.nodes[node].item {
-            return Some(arc.site);
-        } else {
-            return None;
-        }
+        node.and_then(|node| {
+            if let BeachItem::Leaf(ref arc) = self.nodes[node].item {
+                Some(arc.site)
+            } else {
+                None
+            }
+        })
     }
 
     pub fn set_right_site(&mut self, node: usize, site: Point) {
@@ -261,6 +249,8 @@ impl BeachLine {
     pub fn get_edge(&self, node: usize) -> usize {
         if let BeachItem::Internal(ref breakpoint) = self.nodes[node].item {
             breakpoint.halfedge
-        } else {panic!("get_edge target should be Internal");}
+        } else {
+            panic!("target of get_edge should be internal");
+        }
     }
 }
