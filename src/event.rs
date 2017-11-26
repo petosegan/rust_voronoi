@@ -1,6 +1,6 @@
 use std::fmt;
+
 use point::Point;
-use beachline::{BeachLine, BeachItem};
 
 const NIL: usize = !0;
 
@@ -28,7 +28,10 @@ impl VoronoiEvent {
     }
 }
 
+#[derive(Default)]
 pub struct EventQueue {
+    pub next_event_id: usize,
+    pub node_to_id: Vec<usize>,
     pub events: Vec<VoronoiEvent>,
 }
 
@@ -58,19 +61,27 @@ impl fmt::Debug for EventQueue {
 
 impl EventQueue {
     pub fn new() -> Self {
-        EventQueue { events: vec![] }
+        EventQueue::default()
     }
 
-    pub fn push(&mut self, event: VoronoiEvent, beachline: &mut BeachLine) {
+    pub fn push(&mut self, event: VoronoiEvent) -> usize {
         let new_node_ind = self.events.len();
         info!("pushing event {}", new_node_ind);
         self.events.push(event);
-        self.bubble_up(new_node_ind, beachline);
+
+        // Make event_id
+        let event_id = self.next_event_id;
+        self.next_event_id += 1;
+        self.node_to_id.push(event_id);
+
+        self.bubble_up(new_node_ind);
+
+        event_id
     }
 
     // assumes that the only violation of the heap property
     // is that the bubble might be larger than nodes above it
-    fn bubble_up(&mut self, bubble_node: usize, beachline: &mut BeachLine) {
+    fn bubble_up(&mut self, bubble_node: usize) {
         info!("bubbling up node {}", bubble_node);
         let mut current_parent = parent(bubble_node);
         let mut current_bubble = bubble_node;
@@ -78,7 +89,7 @@ impl EventQueue {
         while current_parent != NIL {
             let parent_key = self.events[current_parent].get_y();
             if bubble_key <= parent_key { break; }
-            self.swap(current_bubble, current_parent, beachline);
+            self.swap(current_bubble, current_parent);
             current_bubble = current_parent;
             current_parent = parent(current_bubble);
         }
@@ -86,7 +97,7 @@ impl EventQueue {
 
     // assumes that the only violation of the heap property
     // is that the bubble might be smaller than nodes below it
-    fn bubble_down(&mut self, bubble_node: usize, beachline: &mut BeachLine) {
+    fn bubble_down(&mut self, bubble_node: usize) {
         let mut largest = bubble_node;
         let bubble_key = self.events[bubble_node].get_y();
 
@@ -100,106 +111,74 @@ impl EventQueue {
             if right_key > largest_key { largest = right_child(bubble_node); }
         }
         if largest != bubble_node {
-            self.swap(bubble_node, largest, beachline);
-            self.bubble_down(largest, beachline);
+            self.swap(bubble_node, largest);
+            self.bubble_down(largest);
         }
     }
 
-    fn swap(&mut self, node_a: usize, node_b: usize, beachline: &mut BeachLine) {
+    fn swap(&mut self, node_a: usize, node_b: usize) {
         info!("swapping {} and {}", node_a, node_b);
-        let mut leaf_a = NIL;
-        let mut leaf_b = NIL;
-        if let VoronoiEvent::Circle(_, _, l_a) = self.events[node_a] {
-            leaf_a = l_a;
-        }
-        if let VoronoiEvent::Circle(_, _, l_b) = self.events[node_b] {
-            leaf_b = l_b;
-        }
+        let id_a = self.node_to_id[node_a];
+        let id_b = self.node_to_id[node_b];
 
         let event_a = self.events[node_a].clone();
         self.events[node_a] = self.events[node_b].clone();
         self.events[node_b] = event_a;
 
-        if leaf_a != NIL {
-            if let BeachItem::Leaf(ref mut arc_a) = beachline.nodes[leaf_a].item {
-                info!("swap a: switched arc {} to point to {}", leaf_a, node_b);
-                arc_a.site_event = Some(node_b);
-            } else {
-                panic!("circle event pointed to non-arc!");
-            }
-        }
-        if leaf_b != NIL {
-            if let BeachItem::Leaf(ref mut arc_b) = beachline.nodes[leaf_b].item {
-                info!("swap b: switched arc {} to point to {}", leaf_b, node_a);
-                arc_b.site_event = Some(node_a);
-            } else {
-                panic!("circle event pointed to non-arc!");
-            }
-        }
+        self.node_to_id[node_a] = id_b;
+        self.node_to_id[node_b] = id_a;
     }
 
     pub fn is_empty(&self) -> bool {
         self.events.is_empty()
     }
 
-    pub fn pop(&mut self, beachline: &mut BeachLine) -> Option<VoronoiEvent> {
+    pub fn pop(&mut self) -> Option<VoronoiEvent> {
         if self.is_empty() { return None; }
         let heapsize = self.events.len()-1;
-        self.swap(0, heapsize, beachline);
+        self.swap(0, heapsize);
         let result = self.events.pop();
 
-        let mut this_leaf = NIL;
-        if let Some(VoronoiEvent::Circle(_, _, leaf)) = result {
-            this_leaf = leaf;
-        }
-        if this_leaf != NIL {
-            if let BeachItem::Leaf(ref mut arc) = beachline.nodes[this_leaf].item {
-                info!("popped circle event, so pointed arc {} to None", this_leaf);
-                arc.site_event = None;
-            } else {
-                panic!("circle event pointed to non-arc!");
-            }
-        }
+        self.node_to_id.pop();
 
         if !self.is_empty() {
-            self.bubble_down(0, beachline);
+            self.bubble_down(0);
         }
 
         return result;
     }
 
-    pub fn remove(&mut self, removed: usize, beachline: &mut BeachLine) {
-        let heapsize = self.events.len()-1;
-        info!("removing node {}, heapsize is {}", removed, heapsize);
-        self.swap(removed, heapsize, beachline);
-        let removed_event = self.events.pop();
-
-        let mut this_leaf = NIL;
-        if let Some(VoronoiEvent::Circle(_, _, leaf)) = removed_event {
-            this_leaf = leaf;
-        }
-        if this_leaf != NIL {
-            if let BeachItem::Leaf(ref mut arc) = beachline.nodes[this_leaf].item {
-                info!("removed circle event, so pointed arc {} to None", this_leaf);
-                arc.site_event = None;
-            } else {
-                panic!("circle event pointed to non-arc!");
+    pub fn remove(&mut self, event_id: usize) {
+        // Find node_id
+        // FIXME: this is very slow!
+        let node_id = 'find_node_id: loop {
+            for (node_id, event_id_2) in self.node_to_id.iter().enumerate() {
+                if *event_id_2 == event_id {
+                    break 'find_node_id node_id;
+                }
             }
-        }
+            return;
+        };
+
+        let heapsize = self.events.len()-1;
+        info!("removing node {}, heapsize is {}", node_id, heapsize);
+        self.swap(node_id, heapsize);
+        self.events.pop();
+        self.node_to_id.pop();
 
         if self.is_empty() { return; }
-        if removed >= self.events.len() { return; }
+        if node_id >= self.events.len() { return; }
 
         // re-establish heap property
-        let bubble_key = self.events[removed].get_y();
-        let bubble_parent = parent(removed);
+        let bubble_key = self.events[node_id].get_y();
+        let bubble_parent = parent(node_id);
         if bubble_parent != NIL {
             let parent_key = self.events[bubble_parent].get_y();
             if bubble_key > parent_key {
-                self.bubble_up(removed, beachline);
+                self.bubble_up(node_id);
                 return;
             }
         }
-        self.bubble_down(removed, beachline);
+        self.bubble_down(node_id);
     }
 }
