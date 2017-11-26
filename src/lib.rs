@@ -11,6 +11,7 @@
 extern crate log;
 extern crate rand;
 extern crate ordered_float;
+extern crate fnv;
 
 mod geometry;
 mod point;
