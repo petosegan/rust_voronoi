@@ -13,7 +13,7 @@ pub fn voronoi(points: Vec<Point>, boxsize: f64) -> DCEL {
     let mut event_queue = EventQueue::new();
     let mut beachline = BeachLine::new();
     for pt in points {
-        event_queue.push(VoronoiEvent::Site { 0: pt });
+        event_queue.push(Event::Site { 0: pt });
     }
     let mut result = DCEL::new();
 
@@ -24,10 +24,10 @@ pub fn voronoi(points: Vec<Point>, boxsize: f64) -> DCEL {
         trace!("Popped event from queue: {:?}", this_event);
 
         match this_event {
-            VoronoiEvent::Site(pt) => {
+            Event::Site(pt) => {
                 handle_site_event(pt, &mut event_queue,  &mut beachline, &mut result);
             }
-            VoronoiEvent::Circle(center, _, leaf, _) => {
+            Event::Circle(center, _, leaf, _) => {
                 handle_circle_event(leaf, center, &mut event_queue, &mut beachline, &mut result);
             }
         }
@@ -84,7 +84,7 @@ fn remove_circle_event(this_arc: usize, queue: &mut EventQueue, beachline: &mut 
 fn make_circle_event(leaf: usize, triple: TripleSite, queue: &mut EventQueue, beachline: &mut BeachLine) {
     if let Some(circle_center) = circle_center(triple) {
         let circle_bottom = circle_bottom(triple).unwrap();
-        let this_event = VoronoiEvent::Circle {0: circle_center, 1: circle_bottom.0 - circle_center.y(), 2: leaf, 3: 0};
+        let this_event = Event::Circle {0: circle_center, 1: circle_bottom.0 - circle_center.y(), 2: leaf, 3: 0};
         if let BeachItem::Leaf(ref mut arc) = beachline.nodes[leaf].item {
             arc.site_event = Some(queue.push(this_event));
         }
