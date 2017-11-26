@@ -1,6 +1,5 @@
 use std::fmt;
 use point::Point;
-use std::collections::HashSet;
 use geometry::{Segment, segment_intersection};
 
 const NIL: usize = !0;
@@ -45,16 +44,16 @@ impl DCEL {
     /// Set the previous edge of all halfedges
     /// Assumes that the DCEL is well-formed.
     pub fn set_prev(&mut self) {
-        let mut seen_edges = HashSet::new();
+        let mut seen_edges = vec![false; self.halfedges.len()];
         for edge_ind in 0..self.halfedges.len() {
-            if seen_edges.contains(&edge_ind) { continue; }
+            if seen_edges[edge_ind] { continue; }
             let mut current_ind = edge_ind;
-            seen_edges.insert(current_ind);
+            seen_edges[current_ind];
             loop {
                 let next_edge = self.halfedges[current_ind].next;
                 self.halfedges[next_edge].prev = current_ind;
                 current_ind = next_edge;
-                seen_edges.insert(current_ind);
+                seen_edges[current_ind] = true;
                 if current_ind == edge_ind { break; }
             }
         }
@@ -199,14 +198,14 @@ impl Face {
 /// This method will panic if the DCEL has any faces already.
 pub fn add_faces(dcel: &mut DCEL) {
     if !dcel.faces.is_empty() { panic!("add_faces only works on DCELs with no faces");}
-    let mut seen_edges = HashSet::new();
     let num_halfedges = dcel.halfedges.len();
+    let mut seen_edges = vec![false; num_halfedges];
 
     let mut processed_edges = 0;
     info!("Adding faces. There are {} halfedges.", num_halfedges);
 
     for edge_index in 0..num_halfedges {
-        if seen_edges.contains(&edge_index) || !dcel.halfedges[edge_index].alive { continue; }
+        if seen_edges[edge_index] || !dcel.halfedges[edge_index].alive { continue; }
         processed_edges += 1;
 
         let face_index = dcel.faces.len();
@@ -215,7 +214,7 @@ pub fn add_faces(dcel: &mut DCEL) {
 
         let mut current_edge = edge_index;
         loop {
-            seen_edges.insert(current_edge);
+            seen_edges[current_edge] = true;
             dcel.halfedges[current_edge].face = face_index;
             current_edge = dcel.halfedges[current_edge].next;
             if current_edge == edge_index { break; }
@@ -305,15 +304,15 @@ fn add_twins_from_pt(start_pt: Point, dcel: &mut DCEL) -> (usize, usize, usize) 
 
 fn get_line_intersections(seg: Segment, dcel: &DCEL) -> Vec<(Point, usize)> {
     let mut intersections = vec![];
-    let mut seen_halfedges = HashSet::new();
+    let mut seen_halfedges = vec![false; dcel.halfedges.len()];
     for (index, halfedge) in dcel.halfedges.iter().enumerate() {
         let twin = halfedge.twin;
-        if seen_halfedges.contains(&index) || seen_halfedges.contains(&twin) || !halfedge.alive { continue; }
+        if seen_halfedges[index] || seen_halfedges[twin] || !halfedge.alive { continue; }
         let this_seg = [dcel.get_origin(index), dcel.get_origin(twin)];
         let this_intersection = segment_intersection(seg, this_seg);
         if let Some(int_pt) = this_intersection { intersections.push((int_pt, index)); }
-        seen_halfedges.insert(index);
-        seen_halfedges.insert(twin);
+        seen_halfedges[index] = true;
+        seen_halfedges[twin] = true;
     }
     return intersections;
 }
