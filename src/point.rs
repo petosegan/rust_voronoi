@@ -95,3 +95,10 @@ impl Ord for Point {
         } else { return Ordering::Less; }
     }
 }
+
+impl<T: Into<f64>, U: Into<f64>> From<(T, U)> for Point {
+    fn from(other: (T, U)) -> Self {
+        let (first, second) = other;
+        Point::new(first.into(), second.into())
+    }
+}
