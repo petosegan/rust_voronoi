@@ -6,6 +6,7 @@ use std::cmp::Ordering;
 
 /// A point in two dimensions
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct Point {
     /// x coordinate
     pub x: OrderedFloat<f64>,
