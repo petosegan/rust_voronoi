@@ -1,4 +1,3 @@
-use rand::{Rand, Rng, random};
 use std::ops::{Sub, Mul, Add};
 use std::fmt;
 use ordered_float::OrderedFloat;
@@ -6,6 +5,7 @@ use std::cmp::Ordering;
 
 /// A point in two dimensions
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct Point {
     /// x coordinate
     pub x: OrderedFloat<f64>,
@@ -33,13 +33,6 @@ impl Point {
 impl fmt::Debug for Point {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({0:.1}, {1:.1})", self.x(), self.y())
-    }
-}
-
-#[allow(unused_variables)]
-impl Rand for Point {
-    fn rand<R: Rng>(rng: &mut R) -> Point {
-        Point::new(random::<f64>(), random::<f64>())
     }
 }
 
