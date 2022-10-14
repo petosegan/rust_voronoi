@@ -31,7 +31,7 @@ mod tests {
         let points = vec![Point::new(0.0, 1.0)];
 
         b.iter(|| {
-            voronoi(points.clone(), BOX_SIZE);
+            voronoi(points.clone(), (BOX_SIZE, BOX_SIZE));
         });
     }
 
@@ -40,7 +40,7 @@ mod tests {
         let points = generate_points(100);
 
         b.iter(|| {
-            voronoi(points.clone(), BOX_SIZE);
+            voronoi(points.clone(), (BOX_SIZE, BOX_SIZE));
         });
     }
 
@@ -50,7 +50,7 @@ mod tests {
         let points = generate_points(10000);
 
         b.iter(|| {
-            voronoi(points.clone(), BOX_SIZE);
+            voronoi(points.clone(), (BOX_SIZE, BOX_SIZE));
         });
     }
 }

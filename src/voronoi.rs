@@ -8,7 +8,7 @@ type TripleSite = (Point, Point, Point);
 
 /// Computes the Voronoi diagram of a set of points.
 /// Returns a Doubly Connected Edge List.
-pub fn voronoi(points: Vec<Point>, boxsize: f64) -> DCEL {
+pub fn voronoi(points: Vec<Point>, bounds: (f64, f64)) -> DCEL {
     trace!("Starting Voronoi Computation");
     let mut event_queue = EventQueue::new();
     let mut beachline = BeachLine::new();
@@ -32,7 +32,7 @@ pub fn voronoi(points: Vec<Point>, boxsize: f64) -> DCEL {
             }
         }
     }
-    add_bounding_box(boxsize, &beachline, &mut result);
+    add_bounding_box(bounds, &beachline, &mut result);
     add_faces(&mut result);
     return result;
 }
@@ -259,19 +259,22 @@ fn handle_circle_event(
     }
 }
 
-fn outside_bb(pt: Point, box_size: f64) -> bool {
+fn outside_bb(pt: Point, bounds: (f64, f64)) -> bool {
     let delta = 0.1;
-    pt.x() < 0. - delta || pt.x() > box_size + delta || pt.y() < 0. - delta || pt.y() > box_size + delta
+    let (max_x, max_y) = bounds;
+    pt.x() < 0. - delta || pt.x() > max_x + delta || pt.y() < 0. - delta || pt.y() > max_y + delta
 }
 
-fn add_bounding_box(boxsize: f64, beachline: &BeachLine, dcel: &mut DCEL) {
-    extend_edges(beachline, dcel);
+fn add_bounding_box(bounds: (f64, f64), beachline: &BeachLine, dcel: &mut DCEL) {
+    extend_edges(beachline, dcel, bounds);
+
+    let (max_x, max_y) = bounds;
 
     let delta = 50.;
-    let bb_top =    [Point::new(0. - delta, 0.),         Point::new(boxsize + delta, 0.)];
-    let bb_bottom = [Point::new(0. - delta, boxsize),    Point::new(boxsize + delta, boxsize)];
-    let bb_left =   [Point::new(0.,         0. - delta), Point::new(0.,              boxsize + delta)];
-    let bb_right =  [Point::new(boxsize,    0. - delta), Point::new(boxsize,         boxsize + delta)];
+    let bb_top =    [Point::new(0. - delta, 0.),        Point::new(max_x + delta, 0.)];
+    let bb_bottom = [Point::new(0. - delta, max_y),        Point::new(max_x + delta, max_y)];
+    let bb_left =   [Point::new(0.,        0. - delta), Point::new(0.,            max_y + delta)];
+    let bb_right =  [Point::new(max_x,        0. - delta), Point::new(max_x,            max_y + delta)];
 
     add_line(bb_top, dcel);
     add_line(bb_right, dcel);
@@ -282,7 +285,7 @@ fn add_bounding_box(boxsize: f64, beachline: &BeachLine, dcel: &mut DCEL) {
 
     for vert in 0..dcel.vertices.len() {
         let this_pt = dcel.vertices[vert].coordinates;
-        if outside_bb(this_pt, boxsize) {
+        if outside_bb(this_pt, bounds) {
             dcel.remove_vertex(vert);
         }
     }
@@ -290,7 +293,8 @@ fn add_bounding_box(boxsize: f64, beachline: &BeachLine, dcel: &mut DCEL) {
 }
 
 // This just extends the edges past the end of the bounding box
-fn extend_edges(beachline: &BeachLine, dcel: &mut DCEL) {
+fn extend_edges(beachline: &BeachLine, dcel: &mut DCEL, bounds: (f64, f64)) {
+    let (max_x, max_y) = bounds;
     let mut current_node = beachline.tree_minimum(beachline.root);
     trace!("\n\n");
     loop {
@@ -299,8 +303,8 @@ fn extend_edges(beachline: &BeachLine, dcel: &mut DCEL) {
             BeachItem::Internal(ref breakpoint) => {
                 let this_edge = breakpoint.halfedge;
                 trace!("Extending halfedge {:?} with breakpoint {:?}, {:?}", this_edge, breakpoint.left_site, breakpoint.right_site);
-                let this_x = get_breakpoint_x(&breakpoint, -1000.0);
-                let this_y = get_breakpoint_y(&breakpoint, -1000.0);
+                let this_x = get_breakpoint_x(&breakpoint, -2.0*max_x);
+                let this_y = get_breakpoint_y(&breakpoint, -2.0*max_y);
 
                 let vert = Vertex {coordinates: Point::new(this_x, this_y), incident_edge: this_edge, alive: true};
                 let vert_ind = dcel.vertices.len();
@@ -327,7 +331,7 @@ mod tests {
     #[test]
     fn readme_example() {
         let vor_pts = vec![Point::new(0.0, 1.0), Point::new(2.0, 3.0), Point::new(10.0, 12.0)];
-        let vor_diagram = voronoi(vor_pts, 800.);
+        let vor_diagram = voronoi(vor_pts, (800., 800.));
         let vor_polys = make_polygons(&vor_diagram);
         assert_eq!(vor_polys.len(), 3);
     }
@@ -337,7 +341,7 @@ mod tests {
     fn degenerate_example_horz() {
         let vor_pts = vec![Point::new(10.0, 1.0), Point::new(20.0, 1.0), Point::new(30.0, 1.0)];
         let num_pts = vor_pts.len();
-        let vor_diagram = voronoi(vor_pts, 800.);
+        let vor_diagram = voronoi(vor_pts, (800., 800.));
         let vor_polys = make_polygons(&vor_diagram);
         assert_eq!(vor_polys.len(), num_pts);
     }
@@ -346,7 +350,7 @@ mod tests {
     fn degenerate_example_vert() {
         let vor_pts = vec![Point::new(1.0, 10.0), Point::new(1.0, 20.0), Point::new(1.0, 30.0), Point::new(1.0, 40.0)];
         let num_pts = vor_pts.len();
-        let vor_diagram = voronoi(vor_pts, 800.);
+        let vor_diagram = voronoi(vor_pts, (800., 800.));
         let vor_polys = make_polygons(&vor_diagram);
         assert_eq!(vor_polys.len(), num_pts);
     }
